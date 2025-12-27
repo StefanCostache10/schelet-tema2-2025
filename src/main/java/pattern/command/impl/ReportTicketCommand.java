@@ -44,7 +44,7 @@ public class ReportTicketCommand implements Command {
 
         // 1. Validare: Utilizator inexistent
         if (user == null) {
-            addError(username, "The user " + username + " was not found in the system.", timestamp);
+            addError(username, "The user " + username + " does not exist.", timestamp); // Mesaj fixat
             return;
         }
 
@@ -75,7 +75,7 @@ public class ReportTicketCommand implements Command {
 
             if (isAnonymous) {
                 if (ticket.getType() != ticketType.BUG) {
-                    addError(username, "Only BUG tickets can be anonymous.", timestamp);
+                    addError(username, "Anonymous reports are only allowed for tickets of type BUG.", timestamp); // Mesaj fixat
                     return;
                 }
                 ticket.setBusinessPriority(ticketPriority.LOW);

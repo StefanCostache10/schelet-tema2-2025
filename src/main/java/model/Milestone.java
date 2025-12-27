@@ -6,29 +6,30 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Milestone {
     private String name;
-    private List<String> blockingFor; // Numele altor milestone-uri
-    private String dueDate; // Format YYYY-MM-DD
-    private List<Integer> tickets; // Lista de ID-uri tichete
-    private List<String> assignedDevs; // Username-uri
+    private List<String> blockingFor;
+    private String dueDate;
+    private List<Integer> tickets;
+    private List<String> assignedDevs;
 
-    // Câmpuri calculate/de stare
-    private Integer assignedProjectManagerId; // Sau username-ul managerului creator
+    // Câmpuri necesare pentru trasabilitate
+    private String createdAt;
+    private String createdBy;
 
     public Milestone() {}
 
-    // Getters and Setters
+    // Getters and Setters (asigură-te că le ai pe toate cele de mai sus)
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-
     public List<String> getBlockingFor() { return blockingFor; }
     public void setBlockingFor(List<String> blockingFor) { this.blockingFor = blockingFor; }
-
     public String getDueDate() { return dueDate; }
     public void setDueDate(String dueDate) { this.dueDate = dueDate; }
-
     public List<Integer> getTickets() { return tickets; }
     public void setTickets(List<Integer> tickets) { this.tickets = tickets; }
-
     public List<String> getAssignedDevs() { return assignedDevs; }
     public void setAssignedDevs(List<String> assignedDevs) { this.assignedDevs = assignedDevs; }
+    public String getCreatedAt() { return createdAt; }
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+    public String getCreatedBy() { return createdBy; }
+    public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
 }

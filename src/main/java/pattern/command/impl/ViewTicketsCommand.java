@@ -58,17 +58,21 @@ public class ViewTicketsCommand implements Command {
         filteredTickets.sort(Comparator.comparing(Ticket::getTimestamp, Comparator.nullsLast(String::compareTo))
                 .thenComparingInt(Ticket::getId));
 
-        // Construire Output "FLAT" (Corectat)
         ObjectNode commandOutput = mapper.createObjectNode();
         commandOutput.put("command", "viewTickets");
-        commandOutput.put("user", username); // Adăugat user dacă e cerut, sau ignorat dacă nu
-        // JSON-ul expected din eroare arată că vrea "username", nu "user", hai să fim siguri:
+        // Eliminat: commandOutput.put("user", username); -> Nu apare în ref
         commandOutput.put("username", username);
         commandOutput.put("timestamp", timestamp);
 
-        ArrayNode ticketsArray = mapper.valueToTree(filteredTickets);
-        commandOutput.set("tickets", ticketsArray); // Cheia este "tickets", nu "output"
+        ArrayNode ticketsArray = mapper.createArrayNode();
+        for (Ticket t : filteredTickets) {
+            ObjectNode tNode = mapper.valueToTree(t);
+            // Suprascriem businessPriority cu cea calculată la momentul curent
+            tNode.put("businessPriority", db.getCalculatedPriority(t, timestamp).toString());
+            ticketsArray.add(tNode);
+        }
 
+        commandOutput.set("tickets", ticketsArray);
         outputList.add(commandOutput);
     }
 }

@@ -1,11 +1,19 @@
 package model.ticket;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class Bug extends Ticket {
+    @JsonIgnore
     private String expectedBehavior;
+    @JsonIgnore
     private String actualBehavior;
-    private String frequency; // RARE, OCCASIONAL, etc.
-    private String severity;  // MINOR, MODERATE, SEVERE
+    @JsonIgnore
+    private String frequency;
+    @JsonIgnore// RARE, OCCASIONAL, etc.
+    private String severity;
+    @JsonIgnore// MINOR, MODERATE, SEVERE
     private String environment;
+    @JsonIgnore
     private Integer errorCode; // Integer pt a permite null
 
     public Bug() { super(); }

@@ -40,9 +40,7 @@ public class ticketFactory {
 
         // 3. Setăm manual câmpuri care nu sunt direct în structura tichetului din comandă
         // De exemplu, 'username' din comandă devine 'reportedBy' în tichet
-        if (commandNode.has("username")) {
-            ticket.setReportedBy(commandNode.get("username").asText());
-        }
+
 
         return ticket;
     }

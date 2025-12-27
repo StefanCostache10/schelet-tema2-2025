@@ -1,7 +1,11 @@
 package model.ticket;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class featureRequest extends Ticket {
-    private String businessValue; // S, M, L, XL
+    @JsonIgnore
+    private String businessValue;
+    @JsonIgnore// S, M, L, XL
     private String customerDemand; // LOW, MEDIUM, etc.
 
     public featureRequest() { super(); }

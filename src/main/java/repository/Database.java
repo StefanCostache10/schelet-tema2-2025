@@ -3,7 +3,7 @@ package repository;
 import model.Milestone;
 import model.ticket.Ticket;
 import model.user.User;
-
+import model.enums.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -85,5 +85,58 @@ public class Database {
         this.milestones.clear();
         this.ticketIdCounter = 0;
         this.appStartDate = null; // Resetăm și data
+    }
+
+    // repository/Database.java
+// Adăugăm o metodă pentru a obține prioritatea calculată
+    public ticketPriority getCalculatedPriority(Ticket ticket, String currentTimestamp) {
+        Milestone m = findMilestoneForTicket(ticket.getId());
+        if (m == null) return ticket.getBusinessPriority();
+
+        // Dacă milestone-ul este blocat, prioritatea nu crește
+        if (isMilestoneBlocked(m)) return ticket.getBusinessPriority();
+
+        LocalDate now = LocalDate.parse(currentTimestamp);
+        LocalDate created = LocalDate.parse(m.getCreatedAt());
+        LocalDate due = LocalDate.parse(m.getDueDate());
+
+        // Regula: Cu o zi înainte de dueDate devine CRITICAL
+        if (now.isAfter(due.minusDays(2))) { // due-1 sau mai târziu
+            return ticketPriority.CRITICAL;
+        }
+
+        // Regula: La fiecare 3 zile crește cu o treaptă
+        long days = java.time.temporal.ChronoUnit.DAYS.between(created, now);
+        int steps = (int) (days / 3);
+
+        ticketPriority p = ticket.getBusinessPriority();
+        for (int i = 0; i < steps; i++) {
+            p = p.next();
+        }
+        return p;
+    }
+
+    public boolean isMilestoneBlocked(Milestone m) {
+        return milestones.stream().anyMatch(other ->
+                other.getBlockingFor() != null &&
+                        other.getBlockingFor().contains(m.getName()) &&
+                        !isMilestoneFinished(other)
+        );
+    }
+
+    private boolean isMilestoneFinished(Milestone m) {
+        return m.getTickets().stream()
+                .map(this::findTicketById)
+                .allMatch(t -> t != null && t.getStatus() == ticketStatus.CLOSED);
+    }
+
+    public Ticket findTicketById(int id) {
+        return tickets.stream().filter(t -> t.getId() == id).findFirst().orElse(null);
+    }
+
+    public Milestone findMilestoneForTicket(int ticketId) {
+        return milestones.stream()
+                .filter(m -> m.getTickets().contains(ticketId))
+                .findFirst().orElse(null);
     }
 }

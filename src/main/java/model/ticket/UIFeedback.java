@@ -1,10 +1,17 @@
 package model.ticket;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class UIFeedback extends Ticket {
+    @JsonIgnore
     private String uiElementId;
+    @JsonIgnore
     private String businessValue;
+    @JsonIgnore
     private Integer usabilityScore;
+    @JsonIgnore
     private String screenshotUrl;
+    @JsonIgnore
     private String suggestedFix;
 
     public UIFeedback() { super(); }
