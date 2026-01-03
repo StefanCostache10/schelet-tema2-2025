@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import model.Milestone;
+import model.enums.ticketStatus;
 import model.ticket.Ticket;
 import model.enums.Role;
 import model.user.User;
@@ -51,7 +53,13 @@ public class ViewTicketsCommand implements Command {
                     .filter(t -> t.getReportedBy() != null && t.getReportedBy().equals(username))
                     .collect(Collectors.toList());
         } else if (user.getRole() == Role.DEVELOPER) {
-            // Logică developer (tbd)
+            filteredTickets = allTickets.stream()
+                    .filter(t -> t.getStatus() == ticketStatus.OPEN)
+                    .filter(t -> {
+                        Milestone m = db.findMilestoneForTicket(t.getId());
+                        return m != null && m.getAssignedDevs().contains(username);
+                    })
+                    .collect(Collectors.toList());
         }
 
         // Sortare

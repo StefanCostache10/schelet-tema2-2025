@@ -3,6 +3,11 @@ package model.user;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import model.enums.Role;
+import pattern.observer.Observer;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
@@ -15,7 +20,7 @@ import model.enums.Role;
         @JsonSubTypes.Type(value = Developer.class, name = "DEVELOPER"),
         @JsonSubTypes.Type(value = Manager.class, name = "MANAGER")
 })
-public abstract class User {
+public abstract class User implements Observer {
     private String username;
     private String email;
     private Role role;
@@ -27,6 +32,17 @@ public abstract class User {
         this.email = email;
         this.role = role;
     }
+
+    @JsonIgnore
+    private List<String> notifications = new ArrayList<>();
+
+    @Override
+    public void update(String message) {
+        notifications.add(message);
+    }
+
+    public List<String> getNotifications() { return notifications; }
+    public void clearNotifications() { notifications.clear(); }
 
     // Getters
     public String getUsername() { return username; }

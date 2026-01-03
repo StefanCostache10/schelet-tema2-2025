@@ -8,10 +8,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import model.user.User;
 import pattern.command.Command;
+import pattern.command.impl.*;
 import pattern.command.impl.CreateMilestoneCommand;
-import pattern.command.impl.ReportTicketCommand;
-import pattern.command.impl.ViewMilestonesCommand;
-import pattern.command.impl.ViewTicketsCommand;
 import repository.Database;
 
 import java.io.File;
@@ -70,6 +68,17 @@ public class App {
                         case "viewMilestones":
                             command = new ViewMilestonesCommand(commandNode, outputs, mapper);
                             break;
+                        case "assignTicket":
+                            command = new AssignTicketCommand(commandNode, outputs, mapper);
+                            break;
+                        case "undoAssignTicket":
+                            command = new UndoAssignTicketCommand(commandNode, outputs, mapper);
+                            break;
+                        case "viewAssignedTickets":
+                            command = new ViewAssignedTicketsCommand(commandNode, outputs, mapper);
+                            break;
+                        case "lostInvestors":
+                            db.closeApp();
 
                         // Aici vei adăuga "createMilestone" când îl implementezi
                         // case "createMilestone":

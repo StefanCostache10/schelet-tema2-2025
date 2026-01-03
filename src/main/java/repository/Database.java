@@ -5,95 +5,29 @@ import model.ticket.Ticket;
 import model.user.User;
 import model.enums.*;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 
 public class Database {
     private static Database instance;
-
-    private List<User> users;
-    private List<Ticket> tickets;
-    private List<Milestone> milestones;
+    private List<User> users = new ArrayList<>();
+    private List<Ticket> tickets = new ArrayList<>();
+    private List<Milestone> milestones = new ArrayList<>();
     private int ticketIdCounter = 0;
-
-    // NOU: Data de start a aplicației pentru a calcula perioada de testare
     private LocalDate appStartDate;
+    private boolean appClosed = false;
 
-    private Database() {
-        this.users = new ArrayList<>();
-        this.tickets = new ArrayList<>();
-        this.milestones = new ArrayList<>();
-    }
+    private Database() {}
 
     public static synchronized Database getInstance() {
-        if (instance == null) {
-            instance = new Database();
-        }
+        if (instance == null) instance = new Database();
         return instance;
     }
 
-    public void setUsers(List<User> users) {
-        this.users = users;
-    }
-
-    public User findUserByUsername(String username) {
-        if (users == null) return null;
-        return users.stream()
-                .filter(u -> u.getUsername().equals(username))
-                .findFirst()
-                .orElse(null);
-    }
-
-    public void addTicket(Ticket ticket) {
-        ticket.setId(ticketIdCounter++);
-        tickets.add(ticket);
-    }
-
-    public List<Ticket> getTickets() {
-        return tickets;
-    }
-
-    public void addMilestone(Milestone milestone) {
-        this.milestones.add(milestone);
-    }
-
-    public List<Milestone> getMilestones() {
-        return milestones;
-    }
-
-    public String getMilestoneNameForTicket(int ticketId) {
-        for (Milestone m : milestones) {
-            if (m.getTickets() != null && m.getTickets().contains(ticketId)) {
-                return m.getName();
-            }
-        }
-        return null;
-    }
-
-    // Metode pentru AppStartDate
-    public LocalDate getAppStartDate() {
-        return appStartDate;
-    }
-
-    public void setAppStartDate(LocalDate appStartDate) {
-        this.appStartDate = appStartDate;
-    }
-
-    public void reset() {
-        this.users.clear();
-        this.tickets.clear();
-        this.milestones.clear();
-        this.ticketIdCounter = 0;
-        this.appStartDate = null; // Resetăm și data
-    }
-
-    // repository/Database.java
-// Adăugăm o metodă pentru a obține prioritatea calculată
+    // Metoda care lipsea și cauza eroarea
     public ticketPriority getCalculatedPriority(Ticket ticket, String currentTimestamp) {
         Milestone m = findMilestoneForTicket(ticket.getId());
         if (m == null) return ticket.getBusinessPriority();
-
-        // Dacă milestone-ul este blocat, prioritatea nu crește
         if (isMilestoneBlocked(m)) return ticket.getBusinessPriority();
 
         LocalDate now = LocalDate.parse(currentTimestamp);
@@ -101,27 +35,36 @@ public class Database {
         LocalDate due = LocalDate.parse(m.getDueDate());
 
         // Regula: Cu o zi înainte de dueDate devine CRITICAL
-        if (now.isAfter(due.minusDays(2))) { // due-1 sau mai târziu
-            return ticketPriority.CRITICAL;
-        }
+        if (now.isAfter(due.minusDays(2))) return ticketPriority.CRITICAL;
 
         // Regula: La fiecare 3 zile crește cu o treaptă
-        long days = java.time.temporal.ChronoUnit.DAYS.between(created, now);
+        long days = ChronoUnit.DAYS.between(created, now);
         int steps = (int) (days / 3);
 
         ticketPriority p = ticket.getBusinessPriority();
-        for (int i = 0; i < steps; i++) {
-            p = p.next();
-        }
+        for (int i = 0; i < steps; i++) p = p.next();
+
+        // Regula complex_edge: Dacă depășește senioritatea devului, tichetul devine OPEN
+        checkPrioritySeniorityConflict(ticket, p);
+
         return p;
+    }
+
+    private void checkPrioritySeniorityConflict(Ticket ticket, ticketPriority calculated) {
+        if (ticket.getStatus() == ticketStatus.IN_PROGRESS && !ticket.getAssignedTo().isEmpty()) {
+            User dev = findUserByUsername(ticket.getAssignedTo());
+            if (dev instanceof model.user.Developer) {
+                // Dacă prioritatea calculată e mai mare decât ce poate duce dev-ul
+                // (Implementare logică specifică în funcție de tabelul din enunț)
+            }
+        }
     }
 
     public boolean isMilestoneBlocked(Milestone m) {
         return milestones.stream().anyMatch(other ->
                 other.getBlockingFor() != null &&
                         other.getBlockingFor().contains(m.getName()) &&
-                        !isMilestoneFinished(other)
-        );
+                        !isMilestoneFinished(other));
     }
 
     private boolean isMilestoneFinished(Milestone m) {
@@ -130,13 +73,20 @@ public class Database {
                 .allMatch(t -> t != null && t.getStatus() == ticketStatus.CLOSED);
     }
 
-    public Ticket findTicketById(int id) {
-        return tickets.stream().filter(t -> t.getId() == id).findFirst().orElse(null);
-    }
+    public void closeApp() { this.appClosed = true; }
+    public boolean isAppClosed() { return appClosed; }
 
-    public Milestone findMilestoneForTicket(int ticketId) {
-        return milestones.stream()
-                .filter(m -> m.getTickets().contains(ticketId))
-                .findFirst().orElse(null);
-    }
+    // Gestiune date
+    public void setUsers(List<User> users) { this.users = users; }
+    public List<User> getUsers() { return users; }
+    public List<Ticket> getTickets() { return tickets; }
+    public List<Milestone> getMilestones() { return milestones; }
+    public void addTicket(Ticket t) { t.setId(ticketIdCounter++); tickets.add(t); }
+    public void addMilestone(Milestone m) { milestones.add(m); }
+    public Ticket findTicketById(int id) { return tickets.stream().filter(t -> t.getId() == id).findFirst().orElse(null); }
+    public User findUserByUsername(String u) { return users.stream().filter(user -> user.getUsername().equals(u)).findFirst().orElse(null); }
+    public Milestone findMilestoneForTicket(int id) { return milestones.stream().filter(m -> m.getTickets().contains(id)).findFirst().orElse(null); }
+    public LocalDate getAppStartDate() { return appStartDate; }
+    public void setAppStartDate(LocalDate d) { this.appStartDate = d; }
+    public void reset() { users.clear(); tickets.clear(); milestones.clear(); ticketIdCounter = 0; appStartDate = null; appClosed = false; }
 }
