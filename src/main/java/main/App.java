@@ -30,7 +30,7 @@ public class App {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
 
-        List<ObjectNode> outputs = new ArrayList<>(); // Variabila ta se numește 'outputs'
+        List<ObjectNode> outputs = new ArrayList<>();
 
         try {
             File usersFile = new File(INPUT_USERS_FIELD);
@@ -43,7 +43,7 @@ public class App {
             JsonNode commandsArray = mapper.readTree(inputFile);
 
             if (commandsArray.isArray()) {
-                for (JsonNode commandNode : commandsArray) { // Variabila ta se numește 'commandNode'
+                for (JsonNode commandNode : commandsArray) {
                     String commandName = commandNode.get("command").asText();
                     Command command = null;
 
@@ -66,10 +66,10 @@ public class App {
                         case "undoAssignTicket":
                             command = new UndoAssignTicketCommand(commandNode, outputs, mapper);
                             break;
-                        case "addComment": // Adăugat corect
+                        case "addComment":
                             command = new AddCommentCommand(commandNode, outputs, mapper);
                             break;
-                        case "undoAddComment": // Adăugat corect
+                        case "undoAddComment":
                             command = new UndoAddCommentCommand(commandNode, outputs, mapper);
                             break;
                         case "viewAssignedTickets":
@@ -81,9 +81,17 @@ public class App {
                         case "changeStatus":
                             command = new ChangeStatusCommand(commandNode, outputs, mapper);
                             break;
+                        // --- Comenzi NOI adăugate ---
+                        case "undoChangeStatus":
+                            command = new UndoChangeStatusCommand(commandNode, outputs, mapper);
+                            break;
                         case "viewTicketHistory":
                             command = new ViewTicketHistoryCommand(commandNode, outputs, mapper);
                             break;
+                        case "search":
+                            command = new SearchCommand(commandNode, outputs, mapper);
+                            break;
+                        // ----------------------------
                         default:
                             break;
                     }

@@ -7,12 +7,9 @@ import model.enums.Seniority;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Developer extends User {
     private String hireDate;
-
-    // MODIFICARE: Folosim Enum, nu List, deoarece în JSON e un singur string ("FRONTEND")
     private Expertise expertiseArea;
-
-    // MODIFICARE: Folosim Enum Seniority
     private Seniority seniority;
+    private double performanceScore = 0.0; // Câmp nou necesar pentru Search
 
     public Developer() {
         super();
@@ -22,9 +19,11 @@ public class Developer extends User {
     public String getHireDate() { return hireDate; }
     public Expertise getExpertiseArea() { return expertiseArea; }
     public Seniority getSeniority() { return seniority; }
+    public double getPerformanceScore() { return performanceScore; }
 
     // Setters
     public void setHireDate(String hireDate) { this.hireDate = hireDate; }
     public void setExpertiseArea(Expertise expertiseArea) { this.expertiseArea = expertiseArea; }
     public void setSeniority(Seniority seniority) { this.seniority = seniority; }
+    public void setPerformanceScore(double performanceScore) { this.performanceScore = performanceScore; }
 }

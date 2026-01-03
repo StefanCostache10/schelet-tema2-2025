@@ -51,10 +51,13 @@ public abstract class Ticket {
     private String assignedAt = ""; // Data la care a fost preluat
     private String solvedAt = "";   // Data la care a fost rezolvat
 
+    // Câmp intern pentru logica de Milestone - Nu apare în JSON!
+    private String closedAt = "";
+
     // Lista de comentarii
     private List<Comment> comments = new ArrayList<>();
 
-    // Istoricul acțiunilor - Ignorat la serializarea JSON standard pentru a nu strica testele vechi
+    // Istoricul acțiunilor - Ignorat la serializarea JSON standard
     @JsonIgnore
     private List<ObjectNode> actions = new ArrayList<>();
 
@@ -97,6 +100,11 @@ public abstract class Ticket {
 
     public String getSolvedAt() { return solvedAt; }
     public void setSolvedAt(String solvedAt) { this.solvedAt = solvedAt; }
+
+    // Adăugăm @JsonIgnore aici pentru a ascunde câmpul din output-ul JSON
+    @JsonIgnore
+    public String getClosedAt() { return closedAt; }
+    public void setClosedAt(String closedAt) { this.closedAt = closedAt; }
 
     public List<Comment> getComments() { return comments; }
     public void setComments(List<Comment> comments) { this.comments = comments; }

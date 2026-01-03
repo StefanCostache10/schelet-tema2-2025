@@ -16,7 +16,9 @@ public class ChangeStatusCommand implements Command {
     private final Database db = Database.getInstance();
 
     public ChangeStatusCommand(JsonNode node, List<ObjectNode> out, ObjectMapper mapper) {
-        this.commandNode = node; this.outputList = out; this.mapper = mapper;
+        this.commandNode = node;
+        this.outputList = out;
+        this.mapper = mapper;
     }
 
     @Override
@@ -24,10 +26,12 @@ public class ChangeStatusCommand implements Command {
         int ticketId = commandNode.get("ticketID").asInt();
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
+
         Ticket ticket = db.findTicketById(ticketId);
         if (ticket == null) return;
 
-        // Validare: Doar developerul asignat poate schimba statusul (conform Test 8)
+        if (ticket.getStatus() == ticketStatus.CLOSED) return;
+
         if (!username.equals(ticket.getAssignedTo())) {
             ObjectNode err = mapper.createObjectNode();
             err.put("command", "changeStatus");
@@ -38,23 +42,26 @@ public class ChangeStatusCommand implements Command {
             return;
         }
 
-// În metoda execute() din ChangeStatusCommand.java
-        if (ticket.getStatus() == model.enums.ticketStatus.IN_PROGRESS) {
-            ticket.setStatus(model.enums.ticketStatus.RESOLVED);
+        ticketStatus oldStatus = ticket.getStatus();
+        ticketStatus newStatus = null;
+
+        if (oldStatus == ticketStatus.IN_PROGRESS) {
+            newStatus = ticketStatus.RESOLVED;
+            ticket.setStatus(newStatus);
             ticket.setSolvedAt(timestamp);
+        } else if (oldStatus == ticketStatus.RESOLVED) {
+            newStatus = ticketStatus.CLOSED;
+            ticket.setStatus(newStatus);
+            ticket.setClosedAt(timestamp); // Setăm data închiderii
+        }
 
-            // Găsim numele milestone-ului pentru istoric
-            String milestoneName = db.getMilestones().stream()
-                    .filter(m -> m.getTickets().contains(ticket.getId()))
-                    .map(model.Milestone::getName)
-                    .findFirst()
-                    .orElse("None");
-
+        if (newStatus != null) {
             ObjectNode action = mapper.createObjectNode();
-            action.put("milestone", milestoneName);
-            action.put("user", username);
-            action.put("action", "RESOLVED");
+            action.put("from", oldStatus.toString());
+            action.put("to", newStatus.toString());
+            action.put("by", username);
             action.put("timestamp", timestamp);
+            action.put("action", "STATUS_CHANGED");
             ticket.addAction(action);
         }
     }

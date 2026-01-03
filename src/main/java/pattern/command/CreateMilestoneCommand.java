@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import model.Milestone;
+import model.ticket.Ticket; // Import necesar
 import model.enums.Role;
 import model.user.User;
 import pattern.command.Command;
@@ -29,7 +30,6 @@ public class CreateMilestoneCommand implements Command {
         String timestamp = commandNode.get("timestamp").asText();
         User user = db.findUserByUsername(username);
 
-        // Eroare Rol (fără username în mesaj)
         if (user != null && user.getRole() != Role.MANAGER) {
             ObjectNode errorJson = mapper.createObjectNode();
             errorJson.put("command", "createMilestone");
@@ -45,7 +45,6 @@ public class CreateMilestoneCommand implements Command {
             milestone.setCreatedAt(timestamp);
             milestone.setCreatedBy(username);
 
-            // Validare: Tichete deja atribuite
             for (Integer ticketId : milestone.getTickets()) {
                 Milestone existing = db.findMilestoneForTicket(ticketId);
                 if (existing != null) {
@@ -55,6 +54,22 @@ public class CreateMilestoneCommand implements Command {
             }
 
             db.addMilestone(milestone);
+
+            // --- LOGICĂ NOUĂ PENTRU ISTORIC ---
+            // Pentru fiecare tichet adăugat în milestone, înregistrăm acțiunea
+            for (Integer ticketId : milestone.getTickets()) {
+                Ticket t = db.findTicketById(ticketId);
+                if (t != null) {
+                    ObjectNode action = mapper.createObjectNode();
+                    action.put("action", "ADDED_TO_MILESTONE");
+                    action.put("by", username); // Managerul care a creat milestone-ul
+                    action.put("milestone", milestone.getName());
+                    action.put("timestamp", timestamp);
+                    t.addAction(action);
+                }
+            }
+            // ----------------------------------
+
         } catch (Exception e) {
             e.printStackTrace();
         }

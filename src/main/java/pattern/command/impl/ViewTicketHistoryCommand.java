@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import model.ticket.Ticket;
+import model.ticket.Comment;
 import pattern.command.Command;
 import repository.Database;
 import java.util.List;
@@ -31,19 +32,11 @@ public class ViewTicketHistoryCommand implements Command {
         result.put("timestamp", timestamp);
         ArrayNode historyArray = result.putArray("ticketHistory");
 
-        List<Ticket> ticketsToView;
-
-        // Verificăm dacă avem un ticketID specific sau vizualizăm tot ce e asignat user-ului
-        if (commandNode.has("ticketID")) {
-            int ticketId = commandNode.get("ticketID").asInt();
-            ticketsToView = db.getTickets().stream()
-                    .filter(t -> t.getId() == ticketId)
-                    .collect(Collectors.toList());
-        } else {
-            ticketsToView = db.getTickets().stream()
-                    .filter(t -> username.equals(t.getAssignedTo()))
-                    .collect(Collectors.toList());
-        }
+        // --- Logica de filtrare extinsă pentru a include tichetele unde userul a avut activitate ---
+        List<Ticket> ticketsToView = db.getTickets().stream()
+                .filter(t -> isRelevantForUser(t, username))
+                .collect(Collectors.toList());
+        // ------------------------------------------------------------------------------------------
 
         for (Ticket ticket : ticketsToView) {
             ObjectNode tNode = mapper.createObjectNode();
@@ -52,12 +45,42 @@ public class ViewTicketHistoryCommand implements Command {
             tNode.put("status", ticket.getStatus().toString());
 
             ArrayNode actionsArray = tNode.putArray("actions");
-            for (ObjectNode action : ticket.getActions()) {
-                actionsArray.add(action);
+            if (ticket.getActions() != null) {
+                ticket.getActions().forEach(actionsArray::add);
             }
+
+            // Corectat cheile pentru comentarii
+            ArrayNode commentsArray = tNode.putArray("comments");
+            if (ticket.getComments() != null) {
+                for (Comment c : ticket.getComments()) {
+                    ObjectNode cNode = mapper.createObjectNode();
+                    cNode.put("author", c.getAuthor());
+                    cNode.put("content", c.getContent());      // Corectat: 'text' -> 'content'
+                    cNode.put("createdAt", c.getCreatedAt());  // Corectat: 'timestamp' -> 'createdAt'
+                    commentsArray.add(cNode);
+                }
+            }
+
             historyArray.add(tNode);
         }
 
         outputList.add(result);
+    }
+
+    // Metoda ajutătoare pentru a determina relevanța unui tichet
+    private boolean isRelevantForUser(Ticket t, String username) {
+        // Dacă este reporter sau assignee curent
+        if (username.equals(t.getReportedBy()) || username.equals(t.getAssignedTo())) {
+            return true;
+        }
+        // Dacă userul apare în istoricul de acțiuni (a lucrat la el în trecut)
+        if (t.getActions() != null) {
+            for (JsonNode action : t.getActions()) {
+                if (action.has("by") && action.get("by").asText().equals(username)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

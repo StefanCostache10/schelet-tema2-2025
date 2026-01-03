@@ -42,7 +42,7 @@ public class AssignTicketCommand implements Command {
         if (!(user instanceof Developer)) return;
         Developer dev = (Developer) user;
 
-        // 1. Validare Expertiză (Conform tabelului de specializări)
+        // 1. Validare Expertiză
         List<Expertise> requiredExps = getRequiredSpecializations(ticket.getExpertiseArea());
         if (!requiredExps.contains(dev.getExpertiseArea())) {
             String reqStr = requiredExps.stream().map(Enum::name).sorted().collect(Collectors.joining(", "));
@@ -51,7 +51,7 @@ public class AssignTicketCommand implements Command {
             return;
         }
 
-        // 2. Validare Senioritate (Folosind prioritatea calculată la timestamp-ul curent)
+        // 2. Validare Senioritate
         ticketPriority currentP = db.getCalculatedPriority(ticket, timestamp);
         List<Seniority> requiredSens = getRequiredSeniorities(ticket.getType(), currentP);
         if (!requiredSens.contains(dev.getSeniority())) {
@@ -67,7 +67,7 @@ public class AssignTicketCommand implements Command {
             return;
         }
 
-        // 4. Validare Milestone și repartizare Developer
+        // 4. Validare Milestone
         Milestone m = db.findMilestoneForTicket(ticketId);
         if (m == null || !m.getAssignedDevs().contains(username)) {
             String mName = (m != null) ? m.getName() : "Unknown";
@@ -81,20 +81,39 @@ public class AssignTicketCommand implements Command {
             return;
         }
 
-        // Dacă toate validările trec, aplicăm modificările
+        // --- APLICARE MODIFICĂRI ȘI ISTORIC ---
+
+        // Salvez statusul vechi pentru istoric
+        String oldStatus = ticket.getStatus().toString();
+
         ticket.setStatus(ticketStatus.IN_PROGRESS);
         ticket.setAssignedTo(username);
         ticket.setAssignedAt(timestamp);
 
-        // Notificare conform pattern-ului Observer implementat în User
+        // Actiunea 1: ASSIGNED
+        ObjectNode assignedAction = mapper.createObjectNode();
+        assignedAction.put("action", "ASSIGNED");
+        assignedAction.put("by", username);
+        assignedAction.put("timestamp", timestamp);
+        ticket.addAction(assignedAction);
+
+        // Actiunea 2: STATUS_CHANGED (din OPEN in IN_PROGRESS)
+        ObjectNode statusAction = mapper.createObjectNode();
+        statusAction.put("action", "STATUS_CHANGED");
+        statusAction.put("from", oldStatus);
+        statusAction.put("to", ticket.getStatus().toString());
+        statusAction.put("by", username);
+        statusAction.put("timestamp", timestamp);
+        ticket.addAction(statusAction);
+
+        // ---------------------------------------
+
         user.update("Ticket " + ticketId + " has been assigned to you.");
     }
 
+    // ... (restul metodelor private rămân neschimbate: getRequiredSpecializations, getRequiredSeniorities, addError)
     private List<Expertise> getRequiredSpecializations(String areaStr) {
-        if (areaStr == null) {
-            // Returnăm o listă goală sau o valoare default dacă aria lipsește
-            return Collections.emptyList();
-        }
+        if (areaStr == null) return Collections.emptyList();
         Expertise area = Expertise.valueOf(areaStr);
         List<Expertise> res = new ArrayList<>();
         switch (area) {
@@ -110,11 +129,10 @@ public class AssignTicketCommand implements Command {
 
     private List<Seniority> getRequiredSeniorities(ticketType type, ticketPriority priority) {
         List<Seniority> res = new ArrayList<>();
-        // Reguli Senioritate conform enunțului
         if (type == ticketType.FEATURE_REQUEST) {
             if (priority == ticketPriority.CRITICAL) res.add(Seniority.SENIOR);
             else res.addAll(Arrays.asList(Seniority.MID, Seniority.SENIOR));
-        } else { // BUG sau UI_FEEDBACK
+        } else {
             if (priority == ticketPriority.CRITICAL) res.add(Seniority.SENIOR);
             else if (priority == ticketPriority.HIGH) res.addAll(Arrays.asList(Seniority.MID, Seniority.SENIOR));
             else res.addAll(Arrays.asList(Seniority.JUNIOR, Seniority.MID, Seniority.SENIOR));

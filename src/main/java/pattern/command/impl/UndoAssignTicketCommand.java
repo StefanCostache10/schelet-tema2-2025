@@ -28,22 +28,24 @@ public class UndoAssignTicketCommand implements Command {
         int ticketId = commandNode.get("ticketID").asInt();
 
         Ticket ticket = db.findTicketById(ticketId);
-        // Utilizatorul este garantat să existe conform fluxului de testare general,
-        // dar putem verifica pentru siguranță.
 
-        // 1. Verificare status: trebuie să fie IN_PROGRESS
         if (ticket.getStatus() != ticketStatus.IN_PROGRESS) {
             addError(username, "The ticket must be in IN_PROGRESS state to be de-assigned.", timestamp);
             return;
         }
 
-        // 2. Efectuarea operației de renunțare
-        ticket.setStatus(ticketStatus.OPEN);
-        ticket.setAssignedTo(""); // Se șterge responsabilul
-        ticket.setAssignedAt(""); // Se șterge data asignării
+        // Înregistrăm acțiunea ÎNAINTE de a șterge assignedTo, ca să știm cine a făcut acțiunea
+        // Deși în JSON-ul de referință 'by' este userul care dă comanda, care e același cu assignedTo curent.
+        ObjectNode action = mapper.createObjectNode();
+        action.put("action", "DE-ASSIGNED");
+        action.put("by", username);
+        action.put("timestamp", timestamp);
+        ticket.addAction(action);
 
-        // Notă: Această acțiune ar trebui înregistrată în istoricul tichetului
-        // pentru comanda viewTicketHistory (DE-ASSIGNED)[cite: 151, 164].
+        // Efectuarea operației de renunțare
+        ticket.setStatus(ticketStatus.OPEN);
+        ticket.setAssignedTo("");
+        ticket.setAssignedAt("");
     }
 
     private void addError(String username, String errorMessage, String timestamp) {
