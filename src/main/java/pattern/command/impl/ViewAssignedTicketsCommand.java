@@ -28,11 +28,20 @@ public class ViewAssignedTicketsCommand implements Command {
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
 
+        // 1. Filtrare și sortare folosind PRIORITATEA CALCULATĂ
         List<Ticket> assigned = db.getTickets().stream()
                 .filter(t -> t.getAssignedTo().equals(username))
-                .sorted(Comparator.comparing(Ticket::getBusinessPriority).reversed() // CRITICAL > LOW
-                        .thenComparing(Ticket::getTimestamp)
-                        .thenComparing(Ticket::getId))
+                .sorted((t1, t2) -> {
+                    // Prioritate (CRITICAL > LOW)
+                    int pComp = db.getCalculatedPriority(t2, timestamp)
+                            .compareTo(db.getCalculatedPriority(t1, timestamp));
+                    if (pComp != 0) return pComp;
+                    // CreatedAt crescător
+                    int tComp = t1.getTimestamp().compareTo(t2.getTimestamp());
+                    if (tComp != 0) return tComp;
+                    // ID crescător
+                    return Integer.compare(t1.getId(), t2.getId());
+                })
                 .collect(Collectors.toList());
 
         ObjectNode result = mapper.createObjectNode();
@@ -42,7 +51,16 @@ public class ViewAssignedTicketsCommand implements Command {
         ArrayNode ticketsArray = result.putArray("assignedTickets");
 
         for (Ticket t : assigned) {
-            ticketsArray.add(mapper.valueToTree(t));
+            ObjectNode tNode = mapper.valueToTree(t);
+
+            // 2. ACTUALIZARE PRIORITATE în output
+            tNode.put("businessPriority", db.getCalculatedPriority(t, timestamp).toString());
+
+            // 3. ELIMINARE câmpuri extra conform ref-ului pentru viewAssignedTickets
+            tNode.remove("assignedTo");
+            tNode.remove("solvedAt");
+
+            ticketsArray.add(tNode);
         }
         outputList.add(result);
     }
