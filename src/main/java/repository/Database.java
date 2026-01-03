@@ -16,6 +16,7 @@ public class Database {
     private int ticketIdCounter = 0;
     private LocalDate appStartDate;
     private boolean appClosed = false;
+    private LocalDate currentSystemDate;
 
     private Database() {}
 
@@ -49,6 +50,43 @@ public class Database {
 
         return p;
     }
+    public void updateCurrentDate(String timestampStr) {
+        LocalDate newDate = LocalDate.parse(timestampStr);
+
+        // Dacă este prima dată sau timpul a avansat
+        if (currentSystemDate == null) {
+            currentSystemDate = newDate;
+            checkMilestoneDeadlines(currentSystemDate);
+        } else if (newDate.isAfter(currentSystemDate)) {
+            // Simulăm trecerea zilelor pentru a nu rata notificarea de "o zi înainte"
+            // dacă sărim de la 18.11 la 21.11, trebuie să verificăm și 19, 20.
+            LocalDate d = currentSystemDate.plusDays(1);
+            while (!d.isAfter(newDate)) {
+                checkMilestoneDeadlines(d);
+                d = d.plusDays(1);
+            }
+            currentSystemDate = newDate;
+        }
+    }
+
+    private void checkMilestoneDeadlines(LocalDate dateToCheck) {
+        for (Milestone m : milestones) {
+            // Dacă milestone-ul este terminat (toate tichetele closed), ignorăm (sau verificăm isMilestoneBlocked)
+            if (isMilestoneFinished(m)) continue;
+
+            // Dacă este blocat, regulile de deadline nu se aplică (conform enunț)
+            if (isMilestoneBlocked(m)) continue;
+
+            LocalDate due = LocalDate.parse(m.getDueDate());
+
+            // Regula: O zi calendaristică înainte de dueDate
+            // Exemplu: Due = 2025-11-20. O zi înainte = 2025-11-19.
+            if (dateToCheck.equals(due.minusDays(1))) {
+                String msg = "Milestone " + m.getName() + " is due tomorrow. All unresolved tickets are now CRITICAL.";
+                notifyAssignedDevelopers(m, msg);
+            }
+        }
+    }
 
     private void checkPrioritySeniorityConflict(Ticket ticket, ticketPriority calculated) {
         if (ticket.getStatus() == ticketStatus.IN_PROGRESS && !ticket.getAssignedTo().isEmpty()) {
@@ -71,6 +109,21 @@ public class Database {
         return m.getTickets().stream()
                 .map(this::findTicketById)
                 .allMatch(t -> t != null && t.getStatus() == ticketStatus.CLOSED);
+    }
+
+    public void notifyUser(String username, String message) {
+        User user = findUserByUsername(username);
+        if (user != null) {
+            user.update(message);
+        }
+    }
+
+    public void notifyAssignedDevelopers(Milestone milestone, String message) {
+        if (milestone.getAssignedDevs() != null) {
+            for (String devUsername : milestone.getAssignedDevs()) {
+                notifyUser(devUsername, message);
+            }
+        }
     }
 
     public void closeApp() { this.appClosed = true; }

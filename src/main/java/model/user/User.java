@@ -25,6 +25,7 @@ public abstract class User implements Observer {
     private String email;
     private Role role;
 
+
     public User() {}
 
     public User(String username, String email, Role role) {
