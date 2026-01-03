@@ -7,11 +7,11 @@ import model.enums.Expertise;
 import model.enums.Role;
 import model.enums.Seniority;
 import model.user.Developer;
-import model.user.User;
 import pattern.strategy.SearchStrategy;
 import repository.Database;
 
 import java.util.ArrayList;
+import java.util.Comparator; // Import necesar
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -38,6 +38,9 @@ public class DeveloperSearchStrategy implements SearchStrategy {
                     .filter(d -> d.getSeniority() == Seniority.valueOf(senStr))
                     .collect(Collectors.toList());
         }
+
+        // --- CORECTIE: Sortare developeri lexicografic după username ---
+        developers.sort(Comparator.comparing(Developer::getUsername));
 
         // Mappare rezultate
         List<ObjectNode> results = new ArrayList<>();

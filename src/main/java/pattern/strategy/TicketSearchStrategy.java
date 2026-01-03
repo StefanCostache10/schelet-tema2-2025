@@ -8,6 +8,7 @@ import model.Milestone;
 import model.enums.*;
 import model.ticket.Ticket;
 import model.user.Developer;
+import model.user.Reporter;
 import model.user.User;
 import pattern.strategy.SearchStrategy;
 import repository.Database;
@@ -15,15 +16,35 @@ import repository.Database;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class TicketSearchStrategy implements SearchStrategy {
     @Override
     public List<ObjectNode> search(JsonNode filters, String requesterUsername, ObjectMapper mapper, Database db, String timestamp) {
+        // Obținem utilizatorul care face cererea pentru a aplica regulile de vizibilitate
+        User user = db.findUserByUsername(requesterUsername);
         List<Ticket> tickets = new ArrayList<>(db.getTickets());
 
-        // 1. Filtrare după tip
+        // --- 0. Aplicare reguli de vizibilitate (Base Visibility) ---
+        if (user instanceof Reporter) {
+            // Reporter: vede doar tichetele introduse de el
+            tickets.removeIf(t -> !t.getReportedBy().equals(requesterUsername));
+        } else if (user instanceof Developer) {
+            // Developer: vede doar tichetele OPEN din milestone-urile la care este repartizat
+            tickets.removeIf(t -> {
+                // Elimină dacă nu e OPEN
+                if (t.getStatus() != ticketStatus.OPEN) return true;
+
+                // Elimină dacă nu aparține unui milestone unde dev-ul este asignat
+                Milestone m = db.findMilestoneForTicket(t.getId());
+                return m == null || !m.getAssignedDevs().contains(requesterUsername);
+            });
+        }
+        // Manager: vede tot (nu se aplică filtrări de bază)
+
+        // --- 1. Filtrare după tip ---
         if (filters.has("type")) {
             String typeStr = filters.get("type").asText();
             tickets = tickets.stream()
@@ -31,7 +52,7 @@ public class TicketSearchStrategy implements SearchStrategy {
                     .collect(Collectors.toList());
         }
 
-        // 2. Filtrare după prioritate
+        // --- 2. Filtrare după prioritate ---
         if (filters.has("businessPriority")) {
             String prioStr = filters.get("businessPriority").asText();
             tickets = tickets.stream()
@@ -39,7 +60,7 @@ public class TicketSearchStrategy implements SearchStrategy {
                     .collect(Collectors.toList());
         }
 
-        // 3. Filtrare după data creării (createdAfter)
+        // --- 3. Filtrare după data creării (createdAfter) ---
         if (filters.has("createdAfter")) {
             String dateStr = filters.get("createdAfter").asText();
             tickets = tickets.stream()
@@ -47,32 +68,37 @@ public class TicketSearchStrategy implements SearchStrategy {
                     .collect(Collectors.toList());
         }
 
-        // 4. Filtrare după cuvinte cheie (keywords)
+        // --- 4. Filtrare după cuvinte cheie (keywords) ---
         List<String> keywords = new ArrayList<>();
         if (filters.has("keywords")) {
             for (JsonNode kw : filters.get("keywords")) {
                 keywords.add(kw.asText().toLowerCase());
             }
+            List<String> finalKeywords = keywords;
             tickets = tickets.stream()
                     .filter(t -> {
-                        String content = (t.getTitle() + " " + t.getDescription()).toLowerCase();
-                        return keywords.stream().anyMatch(content::contains);
+                        String desc = t.getDescription() != null ? t.getDescription() : "";
+                        String content = (t.getTitle() + " " + desc).toLowerCase();
+                        return finalKeywords.stream().anyMatch(content::contains);
                     })
                     .collect(Collectors.toList());
         }
 
-        // 5. Filtrare disponibilitate (availableForAssignment)
+        // --- 5. Filtrare disponibilitate (availableForAssignment) ---
         if (filters.has("availableForAssignment") && filters.get("availableForAssignment").asBoolean()) {
-            User user = db.findUserByUsername(requesterUsername);
             if (user instanceof Developer) {
                 Developer dev = (Developer) user;
                 tickets = tickets.stream()
-                        .filter(t -> isAvailableForDeveloper(t, dev, db, timestamp))
+                        .filter(t -> isAvailableForAssignment(t, dev, db, timestamp))
                         .collect(Collectors.toList());
             }
         }
 
-        // Construire rezultate
+        // --- Sortare rezultate (CreatedAt ASC, ID ASC) ---
+        tickets.sort(Comparator.comparing(Ticket::getTimestamp)
+                .thenComparing(Ticket::getId));
+
+        // Construire rezultate JSON
         List<ObjectNode> results = new ArrayList<>();
         for (Ticket t : tickets) {
             ObjectNode node = mapper.createObjectNode();
@@ -85,12 +111,15 @@ public class TicketSearchStrategy implements SearchStrategy {
             node.put("solvedAt", t.getSolvedAt());
             node.put("reportedBy", t.getReportedBy());
 
-            // Adăugare matchingWords doar dacă s-a căutat după keywords
+            // Sortare matchingWords lexicografic
             if (!keywords.isEmpty()) {
                 ArrayNode mwNode = node.putArray("matchingWords");
-                String content = (t.getTitle() + " " + t.getDescription()).toLowerCase();
+                String desc = t.getDescription() != null ? t.getDescription() : "";
+                String content = (t.getTitle() + " " + desc).toLowerCase();
+
                 keywords.stream()
                         .filter(content::contains)
+                        .sorted()
                         .forEach(mwNode::add);
             }
             results.add(node);
@@ -98,7 +127,13 @@ public class TicketSearchStrategy implements SearchStrategy {
         return results;
     }
 
-    private boolean isAvailableForDeveloper(Ticket t, Developer dev, Database db, String timestamp) {
+    /**
+     * Verifică dacă un tichet poate fi preluat (assigned) de un developer.
+     * Aceasta implică reguli suplimentare față de simpla vizibilitate (expertiză, senioritate, milestone blocat).
+     * Notă: Condițiile de bază (OPEN, apartenență milestone) sunt deja filtrate mai sus,
+     * dar le păstrăm aici pentru completitudine sau în caz de reutilizare.
+     */
+    private boolean isAvailableForAssignment(Ticket t, Developer dev, Database db, String timestamp) {
         // Trebuie să fie OPEN
         if (t.getStatus() != ticketStatus.OPEN) return false;
 
@@ -114,17 +149,13 @@ public class TicketSearchStrategy implements SearchStrategy {
         List<Seniority> requiredSens = getRequiredSeniorities(t.getType(), currentP);
         if (!requiredSens.contains(dev.getSeniority())) return false;
 
-        // Verificare Milestone (Developerul trebuie să fie asignat la milestone-ul tichetului)
-        Milestone m = db.findMilestoneForTicket(t.getId());
-        if (m == null || !m.getAssignedDevs().contains(dev.getUsername())) return false;
-
         // Verificare Milestone Blocat
-        if (db.isMilestoneBlocked(m)) return false;
+        Milestone m = db.findMilestoneForTicket(t.getId());
+        if (m != null && db.isMilestoneBlocked(m)) return false;
 
         return true;
     }
 
-    // Metode helper copiate din AssignTicketCommand pentru consistență
     private List<Expertise> getRequiredSpecializations(String areaStr) {
         if (areaStr == null) return Collections.emptyList();
         Expertise area = Expertise.valueOf(areaStr);
