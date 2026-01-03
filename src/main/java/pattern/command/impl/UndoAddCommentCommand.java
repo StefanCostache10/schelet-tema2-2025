@@ -28,17 +28,17 @@ public class UndoAddCommentCommand implements Command {
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
 
+        // Mesaj actualizat conform referinței Test 7
         if (ticket.getReportedBy() == null || ticket.getReportedBy().isEmpty()) {
-            addError(username, "Cannot remove comment from an anonymous ticket.", timestamp);
+            addError(username, "Comments are not allowed on anonymous tickets.", timestamp);
             return;
         }
 
-        // Găsim ultimul comentariu al utilizatorului
         List<Comment> comments = ticket.getComments();
         for (int i = comments.size() - 1; i >= 0; i--) {
             if (comments.get(i).getAuthor().equals(username)) {
                 comments.remove(i);
-                return; // Am șters ultimul comentariu, ieșim
+                return;
             }
         }
     }

@@ -1,9 +1,11 @@
 package model.ticket;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import model.enums.ticketPriority;
 import model.enums.ticketStatus;
 import model.enums.ticketType;
@@ -12,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Clasa de bază pentru toate tipurile de tichete din sistem[cite: 41].
+ * Clasa de bază pentru toate tipurile de tichete din sistem.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeInfo(
@@ -27,30 +29,34 @@ import java.util.List;
         @JsonSubTypes.Type(value = UIFeedback.class, name = "UI_FEEDBACK")
 })
 public abstract class Ticket {
-    private int id; // Identificator unic [cite: 41]
-    private ticketType type; // BUG, FEATURE_REQUEST, UI_FEEDBACK [cite: 41]
-    private String title; // Titlu scurt [cite: 41]
+    private int id; // Identificator unic
+    private ticketType type; // BUG, FEATURE_REQUEST, UI_FEEDBACK
+    private String title; // Titlu scurt
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private String description; // Descriere (vizibilă doar la citire) [cite: 41]
+    private String description; // Descriere (vizibilă doar la citire)
 
-    private ticketPriority businessPriority; // LOW, MEDIUM, HIGH, CRITICAL [cite: 41]
-    private ticketStatus status = ticketStatus.OPEN; // Status inițial [cite: 41, 114]
+    private ticketPriority businessPriority; // LOW, MEDIUM, HIGH, CRITICAL
+    private ticketStatus status = ticketStatus.OPEN; // Status inițial
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private String expertiseArea; // Expertiză necesară (vizibilă doar la citire) [cite: 41]
+    private String expertiseArea; // Expertiză necesară (vizibilă doar la citire)
 
-    private String reportedBy = ""; // Persoana care a inițiat tichetul [cite: 41]
-    private String assignedTo = ""; // Developerul responsabil [cite: 115]
+    private String reportedBy = ""; // Persoana care a inițiat tichetul
+    private String assignedTo = ""; // Developerul responsabil
 
     @JsonProperty("createdAt")
     private String timestamp; // Mapare timestamp -> createdAt pentru output
 
-    private String assignedAt = ""; // Data la care a fost preluat [cite: 119]
-    private String solvedAt = "";   // Data la care a fost rezolvat [cite: 119]
+    private String assignedAt = ""; // Data la care a fost preluat
+    private String solvedAt = "";   // Data la care a fost rezolvat
 
-    // Lista de comentarii folosind tipul specific Comment
+    // Lista de comentarii
     private List<Comment> comments = new ArrayList<>();
+
+    // Istoricul acțiunilor - Ignorat la serializarea JSON standard pentru a nu strica testele vechi
+    @JsonIgnore
+    private List<ObjectNode> actions = new ArrayList<>();
 
     public Ticket() {}
 
@@ -94,4 +100,9 @@ public abstract class Ticket {
 
     public List<Comment> getComments() { return comments; }
     public void setComments(List<Comment> comments) { this.comments = comments; }
+
+    @JsonIgnore
+    public List<ObjectNode> getActions() { return actions; }
+
+    public void addAction(ObjectNode action) { this.actions.add(action); }
 }

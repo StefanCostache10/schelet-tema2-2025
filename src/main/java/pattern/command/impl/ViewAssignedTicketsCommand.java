@@ -51,14 +51,23 @@ public class ViewAssignedTicketsCommand implements Command {
         ArrayNode ticketsArray = result.putArray("assignedTickets");
 
         for (Ticket t : assigned) {
+
+            System.out.println("[DEBUG View] Verific tichet ID: " + t.getId());
+            System.out.println("[DEBUG View] Comentarii în obiectul Ticket: " + t.getComments().size());
+            // Folosim tNode pentru a manipula structura finală
             ObjectNode tNode = mapper.valueToTree(t);
 
-            // 2. ACTUALIZARE PRIORITATE în output
+            // Corecție obligatorie: Jackson s-ar putea să nu mapeze 'timestamp' ca 'createdAt' automat în acest context
+            // deși ai @JsonProperty("createdAt") în Ticket.java, verifică să fie activat.
+
+            // În ref_06, Ticket-ul are nevoie de 'createdAt' (care vine din timestamp-ul de raportare)
             tNode.put("businessPriority", db.getCalculatedPriority(t, timestamp).toString());
 
-            // 3. ELIMINARE câmpuri extra conform ref-ului pentru viewAssignedTickets
+            // Eliminăm câmpurile care nu apar în ref pentru viewAssignedTickets
             tNode.remove("assignedTo");
             tNode.remove("solvedAt");
+            tNode.remove("description"); // Ref-ul nu are descriere în acest view
+            tNode.remove("expertiseArea");
 
             ticketsArray.add(tNode);
         }

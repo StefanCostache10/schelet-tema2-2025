@@ -9,7 +9,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import model.user.User;
 import pattern.command.Command;
 import pattern.command.impl.*;
-import pattern.command.impl.CreateMilestoneCommand;
 import repository.Database;
 
 import java.io.File;
@@ -25,33 +24,26 @@ public class App {
     private static final ObjectWriter WRITER = new ObjectMapper().writer().withDefaultPrettyPrinter();
 
     public static void run(final String inputPath, final String outputPath) {
-        // 1. Resetăm baza de date la fiecare rulare de test
         Database db = Database.getInstance();
         db.reset();
 
         ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule()); // Pentru date calendaristice
+        mapper.registerModule(new JavaTimeModule());
 
-        // Lista unde vom stoca rezultatele (JSON Output)
-        List<ObjectNode> outputs = new ArrayList<>();
+        List<ObjectNode> outputs = new ArrayList<>(); // Variabila ta se numește 'outputs'
 
         try {
-            // 2. Încărcăm utilizatorii în baza de date
             File usersFile = new File(INPUT_USERS_FIELD);
             if (usersFile.exists()) {
                 List<User> users = mapper.readValue(usersFile, new TypeReference<List<User>>() {});
                 db.setUsers(users);
-            } else {
-                System.err.println("Users file not found: " + INPUT_USERS_FIELD);
             }
 
-            // 3. Citim fișierul de comenzi
             File inputFile = new File(inputPath);
             JsonNode commandsArray = mapper.readTree(inputFile);
 
-            // 4. Procesăm fiecare comandă
             if (commandsArray.isArray()) {
-                for (JsonNode commandNode : commandsArray) {
+                for (JsonNode commandNode : commandsArray) { // Variabila ta se numește 'commandNode'
                     String commandName = commandNode.get("command").asText();
                     Command command = null;
 
@@ -74,17 +66,24 @@ public class App {
                         case "undoAssignTicket":
                             command = new UndoAssignTicketCommand(commandNode, outputs, mapper);
                             break;
+                        case "addComment": // Adăugat corect
+                            command = new AddCommentCommand(commandNode, outputs, mapper);
+                            break;
+                        case "undoAddComment": // Adăugat corect
+                            command = new UndoAddCommentCommand(commandNode, outputs, mapper);
+                            break;
                         case "viewAssignedTickets":
                             command = new ViewAssignedTicketsCommand(commandNode, outputs, mapper);
                             break;
                         case "lostInvestors":
                             db.closeApp();
-
-                        // Aici vei adăuga "createMilestone" când îl implementezi
-                        // case "createMilestone":
-                        //    command = new CreateMilestoneCommand(commandNode, outputs, mapper);
-                        //    break;
-
+                            break;
+                        case "changeStatus":
+                            command = new ChangeStatusCommand(commandNode, outputs, mapper);
+                            break;
+                        case "viewTicketHistory":
+                            command = new ViewTicketHistoryCommand(commandNode, outputs, mapper);
+                            break;
                         default:
                             break;
                     }
@@ -95,16 +94,13 @@ public class App {
                 }
             }
 
-            // 5. Scriem rezultatul final în fișierul de output
             File outputFile = new File(outputPath);
-            // Creăm directoarele părinte dacă nu există (ex: "out/")
             if (outputFile.getParentFile() != null) {
                 outputFile.getParentFile().mkdirs();
             }
             WRITER.writeValue(outputFile, outputs);
 
         } catch (IOException e) {
-            System.out.println("Error processing files: " + e.getMessage());
             e.printStackTrace();
         }
     }
