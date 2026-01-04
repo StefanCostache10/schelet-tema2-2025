@@ -1,24 +1,31 @@
 package model.ticket;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Bug extends Ticket {
-    @JsonIgnore
+
+    // Folosim WRITE_ONLY: citim din JSON (Input), dar nu scriem în JSON (Output)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String expectedBehavior;
-    @JsonIgnore
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String actualBehavior;
-    @JsonIgnore
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String frequency;
-    @JsonIgnore// RARE, OCCASIONAL, etc.
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String severity;
-    @JsonIgnore// MINOR, MODERATE, SEVERE
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String environment;
-    @JsonIgnore
-    private Integer errorCode; // Integer pt a permite null
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private Integer errorCode;
 
     public Bug() { super(); }
 
-    // Getters/Setters standard...
+    // Getters and Setters
     public String getExpectedBehavior() { return expectedBehavior; }
     public void setExpectedBehavior(String expectedBehavior) { this.expectedBehavior = expectedBehavior; }
 

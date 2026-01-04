@@ -1,12 +1,14 @@
 package model.ticket;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class featureRequest extends Ticket {
-    @JsonIgnore
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String businessValue;
-    @JsonIgnore// S, M, L, XL
-    private String customerDemand; // LOW, MEDIUM, etc.
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String customerDemand;
 
     public featureRequest() { super(); }
 

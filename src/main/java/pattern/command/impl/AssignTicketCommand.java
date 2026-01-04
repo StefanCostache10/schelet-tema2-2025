@@ -37,6 +37,13 @@ public class AssignTicketCommand implements Command {
         int ticketId = commandNode.get("ticketID").asInt();
 
         Ticket ticket = db.findTicketById(ticketId);
+
+        // FIX: Verificare existență tichet pentru a evita NullPointerException
+        if (ticket == null) {
+            addError(username, "Ticket " + ticketId + " not found.", timestamp);
+            return;
+        }
+
         User user = db.findUserByUsername(username);
 
         if (!(user instanceof Developer)) return;
@@ -111,7 +118,7 @@ public class AssignTicketCommand implements Command {
         user.update("Ticket " + ticketId + " has been assigned to you.");
     }
 
-    // ... (restul metodelor private rămân neschimbate: getRequiredSpecializations, getRequiredSeniorities, addError)
+    // ... (restul metodelor private rămân neschimbate)
     private List<Expertise> getRequiredSpecializations(String areaStr) {
         if (areaStr == null) return Collections.emptyList();
         Expertise area = Expertise.valueOf(areaStr);

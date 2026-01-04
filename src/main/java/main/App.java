@@ -101,13 +101,38 @@ public class App {
                         case "viewNotifications":
                             command = new ViewNotificationsCommand(commandNode, outputs, mapper);
                             break;
+                        case "generateCustomerImpactReport":
+                            command = new GenerateCustomerImpactReportCommand(commandNode, outputs, mapper);
+                            break;
+                        // ADAUGĂ ACEST CASE:
+                        case "generateTicketRiskReport":
+                            command = new GenerateTicketRiskReportCommand(commandNode, outputs, mapper);
+                            break;
+                        // ADAUGĂ ACEST CASE:
+                        case "generateResolutionEfficiencyReport":
+                            command = new GenerateResolutionEfficiencyReportCommand(commandNode, outputs, mapper);
+                            break;
+                        // ADAUGĂ ACEST CAZ:
+                        case "appStabilityReport":
+                            command = new GenerateAppStabilityReportCommand(commandNode, outputs, mapper);
+                            break;
+                        // ADAUGĂ ACEST CAZ:
+                        case "generatePerformanceReport":
+                            command = new GeneratePerformanceReportCommand(commandNode, outputs, mapper);
+                            break;
                         // ----------------------------
                         default:
                             break;
                     }
 
+
+
                     if (command != null) {
                         command.execute();
+                    }
+
+                    if (db.isAppClosed()) {
+                        break;
                     }
                 }
             }

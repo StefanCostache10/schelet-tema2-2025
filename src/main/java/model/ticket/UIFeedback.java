@@ -1,22 +1,26 @@
 package model.ticket;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class UIFeedback extends Ticket {
-    @JsonIgnore
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String uiElementId;
-    @JsonIgnore
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String businessValue;
-    @JsonIgnore
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Integer usabilityScore;
-    @JsonIgnore
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String screenshotUrl;
-    @JsonIgnore
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String suggestedFix;
 
     public UIFeedback() { super(); }
 
-    // Getters/Setters...
     public String getUiElementId() { return uiElementId; }
     public void setUiElementId(String uiElementId) { this.uiElementId = uiElementId; }
 

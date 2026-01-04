@@ -87,6 +87,8 @@ public class Database {
         }
     }
 
+
+
     // În Database.java
 
     public void checkDependenciesAfterClosingTicket(Ticket closedTicket) {
@@ -176,5 +178,15 @@ public class Database {
     public Milestone findMilestoneForTicket(int id) { return milestones.stream().filter(m -> m.getTickets().contains(id)).findFirst().orElse(null); }
     public LocalDate getAppStartDate() { return appStartDate; }
     public void setAppStartDate(LocalDate d) { this.appStartDate = d; }
-    public void reset() { users.clear(); tickets.clear(); milestones.clear(); ticketIdCounter = 0; appStartDate = null; appClosed = false; }
+    public void reset() {
+        users.clear();
+        tickets.clear();
+        milestones.clear();
+        ticketIdCounter = 0;
+        appStartDate = null;
+        appClosed = false;
+
+        // FIX: Resetează și data curentă pentru a nu afecta testele următoare
+        currentSystemDate = null;
+    }
 }
