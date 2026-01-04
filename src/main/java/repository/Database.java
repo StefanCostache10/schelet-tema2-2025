@@ -50,42 +50,77 @@ public class Database {
 
         return p;
     }
+// În Database.java
+
     public void updateCurrentDate(String timestampStr) {
         LocalDate newDate = LocalDate.parse(timestampStr);
 
-        // Dacă este prima dată sau timpul a avansat
+        // Caz 1: Inițializare
         if (currentSystemDate == null) {
             currentSystemDate = newDate;
+            // Check inițial (poate inputul începe direct cu o zi înainte de deadline)
             checkMilestoneDeadlines(currentSystemDate);
-        } else if (newDate.isAfter(currentSystemDate)) {
-            // Simulăm trecerea zilelor pentru a nu rata notificarea de "o zi înainte"
-            // dacă sărim de la 18.11 la 21.11, trebuie să verificăm și 19, 20.
-            LocalDate d = currentSystemDate.plusDays(1);
-            while (!d.isAfter(newDate)) {
-                checkMilestoneDeadlines(d);
-                d = d.plusDays(1);
-            }
-            currentSystemDate = newDate;
+            return;
+        }
+
+        // Caz 2: Trecerea timpului (poate sări mai multe zile, ex: de pe 18 pe 21)
+        // Trebuie să verificăm fiecare zi intermediară pentru a prinde momentul "due tomorrow"
+        while (currentSystemDate.isBefore(newDate)) {
+            currentSystemDate = currentSystemDate.plusDays(1);
+            checkMilestoneDeadlines(currentSystemDate);
         }
     }
 
     private void checkMilestoneDeadlines(LocalDate dateToCheck) {
         for (Milestone m : milestones) {
-            // Dacă milestone-ul este terminat (toate tichetele closed), ignorăm (sau verificăm isMilestoneBlocked)
-            if (isMilestoneFinished(m)) continue;
-
-            // Dacă este blocat, regulile de deadline nu se aplică (conform enunț)
-            if (isMilestoneBlocked(m)) continue;
+            // Ignorăm milestone-urile terminate sau blocate
+            if (isMilestoneFinished(m) || isMilestoneBlocked(m)) continue;
 
             LocalDate due = LocalDate.parse(m.getDueDate());
 
-            // Regula: O zi calendaristică înainte de dueDate
-            // Exemplu: Due = 2025-11-20. O zi înainte = 2025-11-19.
+            // Regula: O zi calendaristică înainte (due minus 1 zi)
             if (dateToCheck.equals(due.minusDays(1))) {
                 String msg = "Milestone " + m.getName() + " is due tomorrow. All unresolved tickets are now CRITICAL.";
+                // Aceasta va adăuga mesajul în listele Userilor (fără output la consolă)
                 notifyAssignedDevelopers(m, msg);
             }
         }
+    }
+
+    // În Database.java
+
+    public void checkDependenciesAfterClosingTicket(Ticket closedTicket) {
+        // 1. Găsim milestone-ul din care face parte tichetul
+        Milestone parentMilestone = findMilestoneForTicket(closedTicket.getId());
+        if (parentMilestone == null || parentMilestone.getBlockingFor() == null) return;
+
+        // 2. Verificăm dacă milestone-ul curent este ACUM terminat (toate tichetele closed)
+        if (!isMilestoneFinished(parentMilestone)) return;
+
+        // 3. Dacă e terminat, vedem ce milestone-uri deblochează
+        for (String blockedMilestoneName : parentMilestone.getBlockingFor()) {
+            Milestone blockedM = findMilestoneByName(blockedMilestoneName); // Trebuie implementată
+
+            // Verificăm dacă blockedM este acum complet deblocat (nu mai are alte dependențe active)
+            if (blockedM != null && !isMilestoneBlocked(blockedM)) {
+                LocalDate due = LocalDate.parse(blockedM.getDueDate());
+
+                // Regula: Dacă s-a deblocat DUPĂ deadline
+                if (currentSystemDate.isAfter(due)) {
+                    String msg = "Milestone " + blockedM.getName() + " was unblocked after due date. All active tickets are now CRITICAL.";
+                    notifyAssignedDevelopers(blockedM, msg);
+
+                    // TODO: Aici ar trebui setate și tichetele pe CRITICAL, conform enunțului
+                }
+            }
+        }
+    }
+
+    public Milestone findMilestoneByName(String name) {
+        return milestones.stream()
+                .filter(m -> m.getName().equals(name))
+                .findFirst()
+                .orElse(null);
     }
 
     private void checkPrioritySeniorityConflict(Ticket ticket, ticketPriority calculated) {

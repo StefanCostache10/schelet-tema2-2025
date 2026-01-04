@@ -52,7 +52,7 @@ public class ChangeStatusCommand implements Command {
         } else if (oldStatus == ticketStatus.RESOLVED) {
             newStatus = ticketStatus.CLOSED;
             ticket.setStatus(newStatus);
-            ticket.setClosedAt(timestamp); // Setăm data închiderii
+            ticket.setClosedAt(timestamp);
         }
 
         if (newStatus != null) {
@@ -63,6 +63,12 @@ public class ChangeStatusCommand implements Command {
             action.put("timestamp", timestamp);
             action.put("action", "STATUS_CHANGED");
             ticket.addAction(action);
+
+            // --- MODIFICARE START: Verificare dependențe la închidere ---
+            if (newStatus == ticketStatus.CLOSED) {
+                db.checkDependenciesAfterClosingTicket(ticket);
+            }
+            // --- MODIFICARE END ---
         }
     }
 }

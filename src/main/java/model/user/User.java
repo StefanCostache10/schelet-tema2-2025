@@ -34,16 +34,24 @@ public abstract class User implements Observer {
         this.role = role;
     }
 
-    @JsonIgnore
-    private List<String> notifications = new ArrayList<>();
+    // În clasa abstractă User
+    protected List<String> notifications = new ArrayList<>();
 
     @Override
     public void update(String message) {
-        notifications.add(message);
+        // Aici e cheia: Nu facem System.out.println, ci adăugăm în listă
+        this.notifications.add(message);
     }
 
-    public List<String> getNotifications() { return notifications; }
-    public void clearNotifications() { notifications.clear(); }
+    // Getter pentru a le vedea în comandă
+    public List<String> getNotifications() {
+        return new ArrayList<>(notifications);
+    }
+
+    // Metoda de ștergere după vizualizare
+    public void clearNotifications() {
+        this.notifications.clear();
+    }
 
     // Getters
     public String getUsername() { return username; }

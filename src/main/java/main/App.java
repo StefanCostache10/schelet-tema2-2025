@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import model.user.User;
+import pattern.command.CreateMilestoneCommand;
 import pattern.command.Command;
 import pattern.command.impl.*;
 import repository.Database;
@@ -45,6 +46,12 @@ public class App {
             if (commandsArray.isArray()) {
                 for (JsonNode commandNode : commandsArray) {
                     String commandName = commandNode.get("command").asText();
+                    String timestamp = commandNode.get("timestamp").asText(); // Extrage timestamp-ul curent
+
+// CRITIC: Actualizăm data în Database ÎNAINTE de a executa comanda
+// Această metodă va verifica dacă am trecut într-o nouă zi și va declanșa notificările automate
+                    Database.getInstance().updateCurrentDate(timestamp);
+
                     Command command = null;
 
                     switch (commandName) {
@@ -90,6 +97,9 @@ public class App {
                             break;
                         case "search":
                             command = new SearchCommand(commandNode, outputs, mapper);
+                            break;
+                        case "viewNotifications":
+                            command = new ViewNotificationsCommand(commandNode, outputs, mapper);
                             break;
                         // ----------------------------
                         default:

@@ -1,10 +1,10 @@
-package pattern.command.impl;
+package pattern.command;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import model.Milestone;
-import model.ticket.Ticket; // Import necesar
+import model.ticket.Ticket;
 import model.enums.Role;
 import model.user.User;
 import pattern.command.Command;
@@ -55,14 +55,18 @@ public class CreateMilestoneCommand implements Command {
 
             db.addMilestone(milestone);
 
-            // --- LOGICĂ NOUĂ PENTRU ISTORIC ---
-            // Pentru fiecare tichet adăugat în milestone, înregistrăm acțiunea
+            // --- MODIFICARE START: Notificare imediată la crearea milestone-ului ---
+            String notification = "New milestone " + milestone.getName() + " has been created with due date " + milestone.getDueDate() + ".";
+            db.notifyAssignedDevelopers(milestone, notification);
+            // --- MODIFICARE END ---
+
+            // --- LOGICĂ PENTRU ISTORIC ---
             for (Integer ticketId : milestone.getTickets()) {
                 Ticket t = db.findTicketById(ticketId);
                 if (t != null) {
                     ObjectNode action = mapper.createObjectNode();
                     action.put("action", "ADDED_TO_MILESTONE");
-                    action.put("by", username); // Managerul care a creat milestone-ul
+                    action.put("by", username);
                     action.put("milestone", milestone.getName());
                     action.put("timestamp", timestamp);
                     t.addAction(action);
