@@ -120,6 +120,9 @@ public class App {
                         case "generatePerformanceReport":
                             command = new GeneratePerformanceReportCommand(commandNode, outputs, mapper);
                             break;
+                        case "startTestingPhase":
+                            command = new StartTestingPhaseCommand(commandNode, outputs, mapper);
+                            break;
                         // ----------------------------
                         default:
                             break;

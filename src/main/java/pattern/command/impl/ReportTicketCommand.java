@@ -13,7 +13,6 @@ import pattern.factory.ticketFactory;
 import repository.Database;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 public class ReportTicketCommand implements Command {
@@ -34,17 +33,16 @@ public class ReportTicketCommand implements Command {
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
 
-        // Setup App Start Date dacă nu e setat (la prima comandă)
-        LocalDate currentDate = LocalDate.parse(timestamp);
+        // Setup App Start Date la prima comandă, dacă nu există
         if (db.getAppStartDate() == null) {
-            db.setAppStartDate(currentDate);
+            db.setAppStartDate(LocalDate.parse(timestamp));
         }
 
         User user = db.findUserByUsername(username);
 
         // 1. Validare: Utilizator inexistent
         if (user == null) {
-            addError(username, "The user " + username + " does not exist.", timestamp); // Mesaj fixat
+            addError(username, "The user " + username + " does not exist.", timestamp);
             return;
         }
 
@@ -54,16 +52,14 @@ public class ReportTicketCommand implements Command {
             return;
         }
 
-        // 3. Validare: Perioada de Testare (NOU)
-        // Perioada de testare durează 12 zile (zilele 0..11). Dacă diferența >= 12, am depășit.
-        long daysSinceStart = ChronoUnit.DAYS.between(db.getAppStartDate(), currentDate);
-        if (daysSinceStart >= 12) { // De ex: 1 Oct -> 13 Oct sunt 12 zile diferență, deci a 13-a zi.
+        // 3. Validare: Perioada de Testare (MODIFICAT)
+        // Verificăm dacă suntem într-o fază de testare validă folosind logica din Database
+        if (!db.isInTestingPhase(timestamp)) {
             addError(username, "Tickets can only be reported during testing phases.", timestamp);
             return;
         }
 
         try {
-            // Extragem parametrii tichetului
             JsonNode paramsNode = commandNode.has("params") ? commandNode.get("params") : commandNode;
 
             // 4. Creare Tichet
@@ -75,13 +71,13 @@ public class ReportTicketCommand implements Command {
 
             if (isAnonymous) {
                 if (ticket.getType() != ticketType.BUG) {
-                    addError(username, "Anonymous reports are only allowed for tickets of type BUG.", timestamp); // Mesaj fixat
+                    addError(username, "Anonymous reports are only allowed for tickets of type BUG.", timestamp);
                     return;
                 }
                 ticket.setBusinessPriority(ticketPriority.LOW);
             }
 
-            // Salvăm
+            // Salvăm tichetul în baza de date
             db.addTicket(ticket);
 
         } catch (Exception e) {
@@ -89,7 +85,6 @@ public class ReportTicketCommand implements Command {
         }
     }
 
-    // Metoda corectată pentru a genera erori "FLAT" (fără "output": {})
     private void addError(String username, String errorMessage, String timestamp) {
         ObjectNode errorJson = mapper.createObjectNode();
         errorJson.put("command", "reportTicket");

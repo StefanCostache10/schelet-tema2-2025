@@ -29,13 +29,21 @@ public class UndoAssignTicketCommand implements Command {
 
         Ticket ticket = db.findTicketById(ticketId);
 
+        // PROTECȚIE: Verificăm dacă tichetul există înainte de a-l accesa
+        if (ticket == null) {
+            // Putem alege să ignorăm comanda sau să dăm o eroare,
+            // dar important este să NU crăpăm cu NullPointerException.
+            // Conform specificațiilor, "Se garantează că ID-ul există", deci acest caz
+            // apare doar din cauza bug-ului anterior de ne-creare a tichetului.
+            return;
+        }
+
         if (ticket.getStatus() != ticketStatus.IN_PROGRESS) {
             addError(username, "The ticket must be in IN_PROGRESS state to be de-assigned.", timestamp);
             return;
         }
 
-        // Înregistrăm acțiunea ÎNAINTE de a șterge assignedTo, ca să știm cine a făcut acțiunea
-        // Deși în JSON-ul de referință 'by' este userul care dă comanda, care e același cu assignedTo curent.
+        // Înregistrăm acțiunea în istoric
         ObjectNode action = mapper.createObjectNode();
         action.put("action", "DE-ASSIGNED");
         action.put("by", username);

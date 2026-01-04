@@ -17,6 +17,7 @@ public class Database {
     private LocalDate appStartDate;
     private boolean appClosed = false;
     private LocalDate currentSystemDate;
+    private java.time.LocalDate currentTestingPhaseStart;
 
     private Database() {}
 
@@ -69,6 +70,32 @@ public class Database {
             currentSystemDate = currentSystemDate.plusDays(1);
             checkMilestoneDeadlines(currentSystemDate);
         }
+    }
+
+    public void startNewTestingPhase(String timestamp) {
+        this.currentTestingPhaseStart = java.time.LocalDate.parse(timestamp);
+    }
+
+    public boolean isInTestingPhase(String currentTimestampStr) {
+        java.time.LocalDate current = java.time.LocalDate.parse(currentTimestampStr);
+
+        // Verificăm perioada inițială (de la startul aplicației)
+        if (appStartDate != null) {
+            java.time.LocalDate endOfFirstPhase = appStartDate.plusDays(11); // 12 zile inclusiv startul
+            if (!current.isBefore(appStartDate) && !current.isAfter(endOfFirstPhase)) {
+                return true;
+            }
+        }
+
+        // Verificăm perioada curentă declanșată manual
+        if (currentTestingPhaseStart != null) {
+            java.time.LocalDate endOfPhase = currentTestingPhaseStart.plusDays(11);
+            if (!current.isBefore(currentTestingPhaseStart) && !current.isAfter(endOfPhase)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void checkMilestoneDeadlines(LocalDate dateToCheck) {
