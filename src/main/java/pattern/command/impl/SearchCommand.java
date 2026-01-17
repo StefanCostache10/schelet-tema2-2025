@@ -6,19 +6,21 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import pattern.command.Command;
 import pattern.strategy.SearchStrategy;
-import pattern.strategy.impl.DeveloperSearchStrategy;
-import pattern.strategy.impl.TicketSearchStrategy;
+import pattern.strategy.DeveloperSearchStrategy;
+import pattern.strategy.TicketSearchStrategy;
 import repository.Database;
 
 import java.util.List;
 
-public class SearchCommand implements Command {
+public final class SearchCommand implements Command {
     private final JsonNode commandNode;
     private final List<ObjectNode> outputList;
     private final ObjectMapper mapper;
     private final Database db = Database.getInstance();
 
-    public SearchCommand(JsonNode node, List<ObjectNode> out, ObjectMapper mapper) {
+    public SearchCommand(final JsonNode node,
+                         final List<ObjectNode> out,
+                         final ObjectMapper mapper) {
         this.commandNode = node;
         this.outputList = out;
         this.mapper = mapper;

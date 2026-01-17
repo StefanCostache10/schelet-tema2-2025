@@ -10,13 +10,15 @@ import pattern.strategy.ResolutionEfficiencyStrategy;
 import repository.Database;
 import java.util.List;
 
-public class GenerateResolutionEfficiencyReportCommand implements Command {
+public final class GenerateResolutionEfficiencyReportCommand implements Command {
     private final JsonNode commandNode;
     private final List<ObjectNode> outputs;
     private final ObjectMapper mapper;
     private final Database db;
 
-    public GenerateResolutionEfficiencyReportCommand(JsonNode commandNode, List<ObjectNode> outputs, ObjectMapper mapper) {
+    public GenerateResolutionEfficiencyReportCommand(final JsonNode commandNode,
+                                                     final List<ObjectNode> outputs,
+                                                     final ObjectMapper mapper) {
         this.commandNode = commandNode;
         this.outputs = outputs;
         this.mapper = mapper;
@@ -29,13 +31,14 @@ public class GenerateResolutionEfficiencyReportCommand implements Command {
         String timestamp = commandNode.get("timestamp").asText();
 
         User user = db.findUserByUsername(username);
-        // Verificare permisiuni (Manager)
         if (user == null || user.getRole() != model.enums.Role.MANAGER) {
             ObjectNode error = mapper.createObjectNode();
             error.put("command", "generateResolutionEfficiencyReport");
             error.put("username", username);
             error.put("timestamp", timestamp);
-            error.put("error", "The user does not have permission to execute this command: required role MANAGER; user role " + (user != null ? user.getRole() : "null") + ".");
+            error.put("error", "The user does not have permission to execute this command: "
+                    + "required role MANAGER; user role "
+                    + (user != null ? user.getRole() : "null") + ".");
             outputs.add(error);
             return;
         }

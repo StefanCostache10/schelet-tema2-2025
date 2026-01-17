@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import model.ticket.Bug;
 import model.ticket.Ticket;
 import model.ticket.UIFeedback;
-import model.ticket.featureRequest;
-import model.enums.ticketStatus;
+import model.ticket.FeatureRequest;
+import model.enums.TicketStatus;
 import repository.Database;
 
 import java.time.LocalDate;
@@ -17,20 +17,44 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class ResolutionEfficiencyStrategy implements MetricStrategy {
+public final class ResolutionEfficiencyStrategy implements MetricStrategy {
+
+    private static final double PERCENTAGE_MULTIPLIER = 100.0;
+    private static final double BUG_MAX_SCORE = 70.0;
+    private static final double FEATURE_MAX_SCORE = 20.0;
+    private static final double UI_MAX_SCORE = 20.0;
+    private static final double BUG_MULTIPLIER = 10.0;
+
+    private static final int SEVERITY_MINOR = 1;
+    private static final int SEVERITY_MODERATE = 2;
+    private static final int SEVERITY_SEVERE = 3;
+
+    private static final int FREQUENCY_RARE = 1;
+    private static final int FREQUENCY_OCCASIONAL = 2;
+    private static final int FREQUENCY_FREQUENT = 3;
+    private static final int FREQUENCY_ALWAYS = 4;
+
+    private static final int BUSINESS_VALUE_S = 1;
+    private static final int BUSINESS_VALUE_M = 3;
+    private static final int BUSINESS_VALUE_L = 6;
+    private static final int BUSINESS_VALUE_XL = 10;
+
+    private static final int DEMAND_LOW = 1;
+    private static final int DEMAND_MEDIUM = 3;
+    private static final int DEMAND_HIGH = 6;
+    private static final int DEMAND_VERY_HIGH = 10;
 
     @Override
-    public ObjectNode calculate(ObjectMapper mapper, Database db) {
+    public ObjectNode calculate(final ObjectMapper mapper, final Database db) {
         ObjectNode reportNode = mapper.createObjectNode();
 
-        // 1. Filtrare: Doar RESOLVED și CLOSED
         List<Ticket> closedTickets = db.getTickets().stream()
-                .filter(t -> t.getStatus() == ticketStatus.RESOLVED || t.getStatus() == ticketStatus.CLOSED)
+                .filter(t -> t.getStatus() == TicketStatus.RESOLVED
+                        || t.getStatus() == TicketStatus.CLOSED)
                 .collect(Collectors.toList());
 
         reportNode.put("totalTickets", closedTickets.size());
 
-        // 2. Statistici
         Map<String, Integer> byType = new HashMap<>();
         byType.put("BUG", 0);
         byType.put("FEATURE_REQUEST", 0);
@@ -61,23 +85,24 @@ public class ResolutionEfficiencyStrategy implements MetricStrategy {
             switch (t.getType()) {
                 case BUG:
                     score = calculateBugScore((Bug) t, days);
-                    maxScore = 70.0;
+                    maxScore = BUG_MAX_SCORE;
                     break;
                 case FEATURE_REQUEST:
-                    score = calculateFeatureScore((featureRequest) t, days);
-                    maxScore = 20.0;
+                    score = calculateFeatureScore((FeatureRequest) t, days);
+                    maxScore = FEATURE_MAX_SCORE;
                     break;
                 case UI_FEEDBACK:
                     score = calculateUIScore((UIFeedback) t, days);
-                    maxScore = 20.0;
+                    maxScore = UI_MAX_SCORE;
+                    break;
+                default:
                     break;
             }
 
-            double finalEfficiency = (score * 100.0) / maxScore;
+            double finalEfficiency = (score * PERCENTAGE_MULTIPLIER) / maxScore;
             efficiencyScores.get(type).add(finalEfficiency);
         }
 
-        // 3. Output
         ObjectNode ticketsByTypeNode = reportNode.putObject("ticketsByType");
         byType.forEach(ticketsByTypeNode::put);
 
@@ -89,22 +114,27 @@ public class ResolutionEfficiencyStrategy implements MetricStrategy {
 
         ObjectNode efficiencyNode = reportNode.putObject("efficiencyByType");
         efficiencyNode.put("BUG", calculateAverage(efficiencyScores.get("BUG")));
-        efficiencyNode.put("FEATURE_REQUEST", calculateAverage(efficiencyScores.get("FEATURE_REQUEST")));
-        efficiencyNode.put("UI_FEEDBACK", calculateAverage(efficiencyScores.get("UI_FEEDBACK")));
+        efficiencyNode.put("FEATURE_REQUEST",
+                calculateAverage(efficiencyScores.get("FEATURE_REQUEST")));
+        efficiencyNode.put("UI_FEEDBACK",
+                calculateAverage(efficiencyScores.get("UI_FEEDBACK")));
 
         return reportNode;
     }
 
-    private double calculateAverage(List<Double> scores) {
-        if (scores.isEmpty()) return 0.0;
+    private double calculateAverage(final List<Double> scores) {
+        if (scores.isEmpty()) {
+            return 0.0;
+        }
         double sum = 0.0;
-        for (Double s : scores) sum += s;
-        // FIX: Linia lipsă a fost adăugată
+        for (Double s : scores) {
+            sum += s;
+        }
         double avg = sum / scores.size();
-        return Math.round(avg * 100.0) / 100.0;
+        return Math.round(avg * PERCENTAGE_MULTIPLIER) / PERCENTAGE_MULTIPLIER;
     }
 
-    private double calculateDays(String assignedAt, String solvedAt) {
+    private double calculateDays(final String assignedAt, final String solvedAt) {
         if (assignedAt == null || assignedAt.isEmpty() || solvedAt == null || solvedAt.isEmpty()) {
             return 1.0;
         }
@@ -114,70 +144,74 @@ public class ResolutionEfficiencyStrategy implements MetricStrategy {
         return Math.max(1.0, (double) days);
     }
 
-    // --- FORMULE EFICIENTA ---
 
-    private double calculateBugScore(Bug b, double days) {
-        // (frequency + severityFactor) * 10 / days
+    private double calculateBugScore(final Bug b, final double days) {
         int f = getFrequencyValue(b.getFrequency());
         int s = getSeverityValue(b.getSeverity());
-        return (f + s) * 10.0 / days;
+        return (f + s) * BUG_MULTIPLIER / days;
     }
 
-    private double calculateFeatureScore(featureRequest f, double days) {
+    private double calculateFeatureScore(final FeatureRequest f, final double days) {
         // (businessValue + customerDemand) / days
         int v = getBusinessValue(f.getBusinessValue());
         int d = getDemandValue(f.getCustomerDemand());
         return (v + d) / days;
     }
 
-    private double calculateUIScore(UIFeedback u, double days) {
-        // (usabilityScore + businessValue) / days
+    private double calculateUIScore(final UIFeedback u, final double days) {
         int v = getBusinessValue(u.getBusinessValue());
         int usb = u.getUsabilityScore() != null ? u.getUsabilityScore() : 0;
         return (usb + v) / days;
     }
 
-    // --- HELPER VALUES (Actualizate 1, 3, 6, 10) ---
 
-    private int getSeverityValue(String s) {
-        if (s == null) return 0;
+    private int getSeverityValue(final String s) {
+        if (s == null) {
+            return 0;
+        }
         switch (s) {
-            case "MINOR": return 1;
-            case "MODERATE": return 2;
-            case "SEVERE": return 3;
+            case "MINOR": return SEVERITY_MINOR;
+            case "MODERATE": return SEVERITY_MODERATE;
+            case "SEVERE": return SEVERITY_SEVERE;
             default: return 0;
         }
     }
 
-    private int getFrequencyValue(String f) {
-        if (f == null) return 0;
+    private int getFrequencyValue(final String f) {
+        if (f == null) {
+            return 0;
+        }
         switch (f) {
-            case "RARE": return 1;
-            case "OCCASIONAL": return 2;
-            case "FREQUENT": return 3;
-            case "ALWAYS": return 4;
+            case "RARE": return FREQUENCY_RARE;
+            case "OCCASIONAL": return FREQUENCY_OCCASIONAL;
+            case "FREQUENT": return FREQUENCY_FREQUENT;
+            case "ALWAYS": return FREQUENCY_ALWAYS;
             default: return 0;
         }
     }
 
-    private int getBusinessValue(String val) {
-        if (val == null) return 0;
+    private int getBusinessValue(final String val) {
+        if (val == null) {
+            return 0;
+        }
         switch (val) {
-            case "S": return 1;
-            case "M": return 3;
-            case "L": return 6;
-            case "XL": return 10;
+            case "S": return BUSINESS_VALUE_S;
+            case "M": return BUSINESS_VALUE_M;
+            case "L": return BUSINESS_VALUE_L;
+            case "XL": return BUSINESS_VALUE_XL;
             default: return 0;
         }
     }
 
-    private int getDemandValue(String d) {
-        if (d == null) return 0;
+    private int getDemandValue(final String d) {
+        if (d == null) {
+            return 0;
+        }
         switch (d) {
-            case "LOW": return 1;
-            case "MEDIUM": return 3;
-            case "HIGH": return 6;
-            case "VERY_HIGH": return 10;
+            case "LOW": return DEMAND_LOW;
+            case "MEDIUM": return DEMAND_MEDIUM;
+            case "HIGH": return DEMAND_HIGH;
+            case "VERY_HIGH": return DEMAND_VERY_HIGH;
             default: return 0;
         }
     }

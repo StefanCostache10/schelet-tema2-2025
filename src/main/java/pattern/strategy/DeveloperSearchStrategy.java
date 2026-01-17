@@ -1,4 +1,4 @@
-package pattern.strategy.impl;
+package pattern.strategy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -7,17 +7,18 @@ import model.enums.Expertise;
 import model.enums.Role;
 import model.enums.Seniority;
 import model.user.Developer;
-import pattern.strategy.SearchStrategy;
 import repository.Database;
 
 import java.util.ArrayList;
-import java.util.Comparator; // Import necesar
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class DeveloperSearchStrategy implements SearchStrategy {
+public final class DeveloperSearchStrategy implements SearchStrategy {
     @Override
-    public List<ObjectNode> search(JsonNode filters, String requesterUsername, ObjectMapper mapper, Database db, String timestamp) {
+    public List<ObjectNode> search(final JsonNode filters, final String requesterUsername,
+                                   final ObjectMapper mapper, final Database db,
+                                   final String timestamp) {
         List<Developer> developers = db.getUsers().stream()
                 .filter(u -> u.getRole() == Role.DEVELOPER)
                 .map(u -> (Developer) u)
@@ -39,7 +40,6 @@ public class DeveloperSearchStrategy implements SearchStrategy {
                     .collect(Collectors.toList());
         }
 
-        // --- CORECTIE: Sortare developeri lexicografic după username ---
         developers.sort(Comparator.comparing(Developer::getUsername));
 
         // Mappare rezultate

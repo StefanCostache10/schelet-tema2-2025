@@ -1,6 +1,6 @@
 package model.enums;
 
-public enum ticketType {
+public enum TicketType {
     BUG,
     FEATURE_REQUEST,
     UI_FEEDBACK

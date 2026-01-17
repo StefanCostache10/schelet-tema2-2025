@@ -6,9 +6,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import model.enums.ticketPriority;
-import model.enums.ticketStatus;
-import model.enums.ticketType;
+import model.enums.TicketPriority;
+import model.enums.TicketStatus;
+import model.enums.TicketType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,92 +25,166 @@ import java.util.List;
 )
 @JsonSubTypes({
         @JsonSubTypes.Type(value = Bug.class, name = "BUG"),
-        @JsonSubTypes.Type(value = featureRequest.class, name = "FEATURE_REQUEST"),
+        @JsonSubTypes.Type(value = FeatureRequest.class, name = "FEATURE_REQUEST"),
         @JsonSubTypes.Type(value = UIFeedback.class, name = "UI_FEEDBACK")
 })
 public abstract class Ticket {
-    private int id; // Identificator unic
-    private ticketType type; // BUG, FEATURE_REQUEST, UI_FEEDBACK
-    private String title; // Titlu scurt
+    private int id;
+    private TicketType type;
+    private String title;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private String description; // Descriere (vizibilă doar la citire)
+    private String description;
 
-    private ticketPriority businessPriority; // LOW, MEDIUM, HIGH, CRITICAL
-    private ticketStatus status = ticketStatus.OPEN; // Status inițial
+    private TicketPriority businessPriority;
+    private TicketStatus status = TicketStatus.OPEN;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private String expertiseArea; // Expertiză necesară (vizibilă doar la citire)
+    private String expertiseArea;
 
-    private String reportedBy = ""; // Persoana care a inițiat tichetul
-    private String assignedTo = ""; // Developerul responsabil
+    private String reportedBy = "";
+    private String assignedTo = "";
 
     @JsonProperty("createdAt")
-    private String timestamp; // Mapare timestamp -> createdAt pentru output
+    private String timestamp;
 
-    private String assignedAt = ""; // Data la care a fost preluat
-    private String solvedAt = "";   // Data la care a fost rezolvat
+    private String assignedAt = "";
+    private String solvedAt = "";
 
-    // Câmp intern pentru logica de Milestone - Nu apare în JSON!
     private String closedAt = "";
 
-    // Lista de comentarii
     private List<Comment> comments = new ArrayList<>();
 
-    // Istoricul acțiunilor - Ignorat la serializarea JSON standard
     @JsonIgnore
     private List<ObjectNode> actions = new ArrayList<>();
 
-    public Ticket() {}
+    public Ticket() {
+    }
 
-    // --- Getters și Setters ---
+    public final int getId() {
+        return id;
+    }
 
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
+    public final void setId(final int id) {
+        this.id = id;
+    }
 
-    public ticketType getType() { return type; }
-    public void setType(ticketType type) { this.type = type; }
+    public final TicketType getType() {
+        return type;
+    }
 
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
+    public final void setType(final TicketType type) {
+        this.type = type;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public final String getTitle() {
+        return title;
+    }
 
-    public ticketPriority getBusinessPriority() { return businessPriority; }
-    public void setBusinessPriority(ticketPriority businessPriority) { this.businessPriority = businessPriority; }
+    public final void setTitle(final String title) {
+        this.title = title;
+    }
 
-    public ticketStatus getStatus() { return status; }
-    public void setStatus(ticketStatus status) { this.status = status; }
+    public final String getDescription() {
+        return description;
+    }
 
-    public String getExpertiseArea() { return expertiseArea; }
-    public void setExpertiseArea(String expertiseArea) { this.expertiseArea = expertiseArea; }
+    public final void setDescription(final String description) {
+        this.description = description;
+    }
 
-    public String getReportedBy() { return reportedBy; }
-    public void setReportedBy(String reportedBy) { this.reportedBy = reportedBy; }
+    public final TicketPriority getBusinessPriority() {
+        return businessPriority;
+    }
 
-    public String getAssignedTo() { return assignedTo; }
-    public void setAssignedTo(String assignedTo) { this.assignedTo = (assignedTo == null) ? "" : assignedTo; }
+    public final void setBusinessPriority(final TicketPriority businessPriority) {
+        this.businessPriority = businessPriority;
+    }
 
-    public String getTimestamp() { return timestamp; }
-    public void setTimestamp(String timestamp) { this.timestamp = timestamp; }
+    public final TicketStatus getStatus() {
+        return status;
+    }
 
-    public String getAssignedAt() { return assignedAt; }
-    public void setAssignedAt(String assignedAt) { this.assignedAt = assignedAt; }
+    public final void setStatus(final TicketStatus status) {
+        this.status = status;
+    }
 
-    public String getSolvedAt() { return solvedAt; }
-    public void setSolvedAt(String solvedAt) { this.solvedAt = solvedAt; }
+    public final String getExpertiseArea() {
+        return expertiseArea;
+    }
 
-    // Adăugăm @JsonIgnore aici pentru a ascunde câmpul din output-ul JSON
+    public final void setExpertiseArea(final String expertiseArea) {
+        this.expertiseArea = expertiseArea;
+    }
+
+    public final String getReportedBy() {
+        return reportedBy;
+    }
+
+    public final void setReportedBy(final String reportedBy) {
+        this.reportedBy = reportedBy;
+    }
+
+    public final String getAssignedTo() {
+        return assignedTo;
+    }
+
+    public final void setAssignedTo(final String assignedTo) {
+        this.assignedTo = (assignedTo == null) ? "" : assignedTo;
+    }
+
+    public final String getTimestamp() {
+        return timestamp;
+    }
+
+    public final void setTimestamp(final String timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public final String getAssignedAt() {
+        return assignedAt;
+    }
+
+    public final void setAssignedAt(final String assignedAt) {
+        this.assignedAt = assignedAt;
+    }
+
+    public final String getSolvedAt() {
+        return solvedAt;
+    }
+
+    public final void setSolvedAt(final String solvedAt) {
+        this.solvedAt = solvedAt;
+    }
+
     @JsonIgnore
-    public String getClosedAt() { return closedAt; }
-    public void setClosedAt(String closedAt) { this.closedAt = closedAt; }
+    public final String getClosedAt() {
+        return closedAt;
+    }
 
-    public List<Comment> getComments() { return comments; }
-    public void setComments(List<Comment> comments) { this.comments = comments; }
+    public final void setClosedAt(final String closedAt) {
+        this.closedAt = closedAt;
+    }
+
+    public final List<Comment> getComments() {
+        return comments;
+    }
+
+    public final void setComments(final List<Comment> comments) {
+        this.comments = comments;
+    }
 
     @JsonIgnore
-    public List<ObjectNode> getActions() { return actions; }
+    public final List<ObjectNode> getActions() {
+        return actions;
+    }
 
-    public void addAction(ObjectNode action) { this.actions.add(action); }
+    /**
+     * Adds an action to the history of this ticket.
+     *
+     * @param action The action to add.
+     */
+    public final void addAction(final ObjectNode action) {
+        this.actions.add(action);
+    }
 }

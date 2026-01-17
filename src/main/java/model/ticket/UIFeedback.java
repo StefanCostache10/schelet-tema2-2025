@@ -2,7 +2,7 @@ package model.ticket;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class UIFeedback extends Ticket {
+public final class UIFeedback extends Ticket {
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String uiElementId;
@@ -19,20 +19,47 @@ public class UIFeedback extends Ticket {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String suggestedFix;
 
-    public UIFeedback() { super(); }
+    public UIFeedback() {
+        super();
+    }
 
-    public String getUiElementId() { return uiElementId; }
-    public void setUiElementId(String uiElementId) { this.uiElementId = uiElementId; }
+    public String getUiElementId() {
+        return uiElementId;
+    }
 
-    public String getBusinessValue() { return businessValue; }
-    public void setBusinessValue(String businessValue) { this.businessValue = businessValue; }
+    public void setUiElementId(final String uiElementId) {
+        this.uiElementId = uiElementId;
+    }
 
-    public Integer getUsabilityScore() { return usabilityScore; }
-    public void setUsabilityScore(Integer usabilityScore) { this.usabilityScore = usabilityScore; }
+    public String getBusinessValue() {
+        return businessValue;
+    }
 
-    public String getScreenshotUrl() { return screenshotUrl; }
-    public void setScreenshotUrl(String screenshotUrl) { this.screenshotUrl = screenshotUrl; }
+    public void setBusinessValue(final String businessValue) {
+        this.businessValue = businessValue;
+    }
 
-    public String getSuggestedFix() { return suggestedFix; }
-    public void setSuggestedFix(String suggestedFix) { this.suggestedFix = suggestedFix; }
+    public Integer getUsabilityScore() {
+        return usabilityScore;
+    }
+
+    public void setUsabilityScore(final Integer usabilityScore) {
+        this.usabilityScore = usabilityScore;
+    }
+
+    public String getScreenshotUrl() {
+        return screenshotUrl;
+    }
+
+    public void setScreenshotUrl(final String screenshotUrl) {
+        this.screenshotUrl = screenshotUrl;
+    }
+
+    public String getSuggestedFix() {
+        return suggestedFix;
+    }
+
+    public void setSuggestedFix(final String suggestedFix) {
+        this.suggestedFix = suggestedFix;
+    }
 }

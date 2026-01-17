@@ -9,26 +9,31 @@ import pattern.command.Command;
 import repository.Database;
 import java.util.List;
 
-public class UndoAddCommentCommand implements Command {
+public final class UndoAddCommentCommand implements Command {
     private final JsonNode commandNode;
     private final List<ObjectNode> outputList;
     private final ObjectMapper mapper;
     private final Database db = Database.getInstance();
 
-    public UndoAddCommentCommand(JsonNode node, List<ObjectNode> out, ObjectMapper mapper) {
-        this.commandNode = node; this.outputList = out; this.mapper = mapper;
+    public UndoAddCommentCommand(final JsonNode node,
+                                 final List<ObjectNode> out,
+                                 final ObjectMapper mapper) {
+        this.commandNode = node;
+        this.outputList = out;
+        this.mapper = mapper;
     }
 
     @Override
     public void execute() {
         int ticketId = commandNode.get("ticketID").asInt();
         Ticket ticket = db.findTicketById(ticketId);
-        if (ticket == null) return;
+        if (ticket == null) {
+            return;
+        }
 
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
 
-        // Mesaj actualizat conform referinței Test 7
         if (ticket.getReportedBy() == null || ticket.getReportedBy().isEmpty()) {
             addError(username, "Comments are not allowed on anonymous tickets.", timestamp);
             return;
@@ -43,7 +48,7 @@ public class UndoAddCommentCommand implements Command {
         }
     }
 
-    private void addError(String user, String msg, String ts) {
+    private void addError(final String user, final String msg, final String ts) {
         ObjectNode err = mapper.createObjectNode();
         err.put("command", "undoAddComment");
         err.put("username", user);

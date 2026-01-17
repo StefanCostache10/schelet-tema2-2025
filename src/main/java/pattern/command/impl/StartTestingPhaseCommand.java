@@ -3,21 +3,20 @@ package pattern.command.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import model.Milestone;
-import model.ticket.Ticket;
 import model.enums.Role;
-import model.enums.ticketStatus;
+import model.enums.TicketStatus;
 import pattern.command.Command;
 import repository.Database;
 import java.util.List;
 
-public class StartTestingPhaseCommand implements Command {
+public final class StartTestingPhaseCommand implements Command {
     private final JsonNode commandNode;
     private final List<ObjectNode> outputList;
     private final ObjectMapper mapper;
     private final Database db = Database.getInstance();
 
-    public StartTestingPhaseCommand(JsonNode commandNode, List<ObjectNode> outputList, ObjectMapper mapper) {
+    public StartTestingPhaseCommand(final JsonNode commandNode, final List<ObjectNode> outputList,
+                                    final ObjectMapper mapper) {
         this.commandNode = commandNode;
         this.outputList = outputList;
         this.mapper = mapper;
@@ -28,29 +27,27 @@ public class StartTestingPhaseCommand implements Command {
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
 
-        // Verifică permisiuni (MANAGER)
-        if (db.findUserByUsername(username) == null || db.findUserByUsername(username).getRole() != Role.MANAGER) {
-            // ... adaugă eroare de permisiune standard ...
+        if (db.findUserByUsername(username) == null
+                || db.findUserByUsername(username).getRole() != Role.MANAGER) {
             return;
         }
 
-        // Verifică dacă mai sunt milestone-uri active
         boolean hasActive = db.getMilestones().stream()
                 .anyMatch(m -> m.getTickets().stream()
                         .map(db::findTicketById)
-                        .anyMatch(t -> t != null && t.getStatus() != ticketStatus.CLOSED));
+                        .anyMatch(t -> t != null && t.getStatus() != TicketStatus.CLOSED));
 
         if (hasActive) {
             ObjectNode error = mapper.createObjectNode();
             error.put("command", "startTestingPhase");
             error.put("username", username);
             error.put("timestamp", timestamp);
-            error.put("error", "Cannot start a new testing phase while there are active milestones."); // Verifică textul exact în teste
+            error.put("error",
+                    "Cannot start a new testing phase while there are active milestones.");
             outputList.add(error);
             return;
         }
 
-        // ACTIVEAZĂ faza nouă în Database
         db.startNewTestingPhase(timestamp);
     }
 }

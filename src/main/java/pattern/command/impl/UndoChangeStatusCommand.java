@@ -4,18 +4,20 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import model.ticket.Ticket;
-import model.enums.ticketStatus;
+import model.enums.TicketStatus;
 import pattern.command.Command;
 import repository.Database;
 import java.util.List;
 
-public class UndoChangeStatusCommand implements Command {
+public final class UndoChangeStatusCommand implements Command {
     private final JsonNode commandNode;
     private final List<ObjectNode> outputList;
     private final ObjectMapper mapper;
     private final Database db = Database.getInstance();
 
-    public UndoChangeStatusCommand(JsonNode node, List<ObjectNode> out, ObjectMapper mapper) {
+    public UndoChangeStatusCommand(final JsonNode node,
+                                   final List<ObjectNode> out,
+                                   final ObjectMapper mapper) {
         this.commandNode = node;
         this.outputList = out;
         this.mapper = mapper;
@@ -28,42 +30,44 @@ public class UndoChangeStatusCommand implements Command {
         String timestamp = commandNode.get("timestamp").asText();
 
         Ticket ticket = db.findTicketById(ticketId);
-        if (ticket == null) return;
+        if (ticket == null) {
+            return;
+        }
 
         if (!username.equals(ticket.getAssignedTo())) {
             ObjectNode err = mapper.createObjectNode();
             err.put("command", "undoChangeStatus");
             err.put("username", username);
             err.put("timestamp", timestamp);
-            err.put("error", "Ticket " + ticketId + " is not assigned to developer " + username + ".");
+            err.put("error", "Ticket " + ticketId
+                    + " is not assigned to developer "
+                    + username + ".");
             outputList.add(err);
             return;
         }
 
-        ticketStatus oldStatus = ticket.getStatus();
+        TicketStatus oldStatus = ticket.getStatus();
 
-        // Logica de inversare a stărilor
-        if (oldStatus == ticketStatus.CLOSED) {
-            // CLOSED -> RESOLVED
-            ticket.setStatus(ticketStatus.RESOLVED);
+        if (oldStatus == TicketStatus.CLOSED) {
+            ticket.setStatus(TicketStatus.RESOLVED);
             ticket.setClosedAt("");
-            recordStatusChange(ticket, oldStatus.toString(), ticketStatus.RESOLVED.toString(), username, timestamp);
+            recordStatusChange(ticket,
+                    oldStatus.toString(), TicketStatus.RESOLVED.toString(),
+                    username, timestamp);
 
-        } else if (oldStatus == ticketStatus.RESOLVED) {
-            // RESOLVED -> IN_PROGRESS
-            ticket.setStatus(ticketStatus.IN_PROGRESS);
+        } else if (oldStatus == TicketStatus.RESOLVED) {
+            ticket.setStatus(TicketStatus.IN_PROGRESS);
             ticket.setSolvedAt("");
-            recordStatusChange(ticket, oldStatus.toString(), ticketStatus.IN_PROGRESS.toString(), username, timestamp);
+            recordStatusChange(ticket, oldStatus.toString(),
+                    TicketStatus.IN_PROGRESS.toString(),
+                    username, timestamp);
 
-        } else if (oldStatus == ticketStatus.IN_PROGRESS) {
-            // IN_PROGRESS -> OPEN (De-assign)
-            ticket.setStatus(ticketStatus.OPEN);
+        } else if (oldStatus == TicketStatus.IN_PROGRESS) {
+            ticket.setStatus(TicketStatus.OPEN);
 
-            // Trecerea în OPEN înseamnă și scoaterea developerului (reversul lui AssignTicket)
             ticket.setAssignedTo("");
             ticket.setAssignedAt("");
 
-            // Pentru această tranziție specifică, înregistrăm 'DE-ASSIGNED', nu 'STATUS_CHANGED'
             ObjectNode action = mapper.createObjectNode();
             action.put("action", "DE-ASSIGNED");
             action.put("by", username);
@@ -72,7 +76,8 @@ public class UndoChangeStatusCommand implements Command {
         }
     }
 
-    private void recordStatusChange(Ticket ticket, String from, String to, String by, String timestamp) {
+    private void recordStatusChange(final Ticket ticket, final String from, final String to,
+                                    final String by, final String timestamp) {
         ObjectNode action = mapper.createObjectNode();
         action.put("from", from);
         action.put("to", to);

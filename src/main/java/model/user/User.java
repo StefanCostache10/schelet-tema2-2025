@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import model.enums.Role;
 import pattern.observer.Observer;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,41 +24,54 @@ public abstract class User implements Observer {
     private String email;
     private Role role;
 
+    protected List<String> notifications = new ArrayList<>();
 
-    public User() {}
+    public User() {
+    }
 
-    public User(String username, String email, Role role) {
+    public User(final String username, final String email, final Role role) {
         this.username = username;
         this.email = email;
         this.role = role;
     }
 
-    // În clasa abstractă User
-    protected List<String> notifications = new ArrayList<>();
-
     @Override
-    public void update(String message) {
-        // Aici e cheia: Nu facem System.out.println, ci adăugăm în listă
+    public final void update(final String message) {
         this.notifications.add(message);
     }
 
-    // Getter pentru a le vedea în comandă
-    public List<String> getNotifications() {
+    public final List<String> getNotifications() {
         return new ArrayList<>(notifications);
     }
 
-    // Metoda de ștergere după vizualizare
-    public void clearNotifications() {
+    /**
+     * Clears the list of notifications for this user.
+     */
+    public final void clearNotifications() {
         this.notifications.clear();
     }
 
-    // Getters
-    public String getUsername() { return username; }
-    public String getEmail() { return email; } // Asta lipsea!
-    public Role getRole() { return role; }
+    public final String getUsername() {
+        return username;
+    }
 
-    // Setters - Jackson are nevoie de ei!
-    public void setUsername(String username) { this.username = username; }
-    public void setEmail(String email) { this.email = email; } // Asta lipsea!
-    public void setRole(Role role) { this.role = role; }
+    public final String getEmail() {
+        return email;
+    }
+
+    public final Role getRole() {
+        return role;
+    }
+
+    public final void setUsername(final String username) {
+        this.username = username;
+    }
+
+    public final void setEmail(final String email) {
+        this.email = email;
+    }
+
+    public final void setRole(final Role role) {
+        this.role = role;
+    }
 }

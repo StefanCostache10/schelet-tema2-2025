@@ -1,27 +1,33 @@
 package pattern.factory;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import model.ticket.*;
-import model.enums.ticketType;
+import model.enums.TicketType;
+import model.ticket.Bug;
+import model.ticket.FeatureRequest;
+import model.ticket.Ticket;
+import model.ticket.UIFeedback;
 
-public class ticketFactory {
+public final class TicketFactory {
+
+    private TicketFactory() {
+    }
 
     /**
      * Metodă statică (Factory Method) care creează un tichet din nodul JSON.
      * Folosește ObjectMapper pentru a popula câmpurile automat.
      */
-    public static Ticket createTicketFromCommand(JsonNode commandNode, ObjectMapper mapper) throws JsonProcessingException {
-        // 1. Identificăm tipul tichetului
+    public static Ticket createTicketFromCommand(final JsonNode commandNode,
+                                                 final ObjectMapper mapper)
+            throws JsonProcessingException {
         if (!commandNode.has("type")) {
             throw new IllegalArgumentException("Ticket type missing in command");
         }
 
         String typeStr = commandNode.get("type").asText();
-        ticketType type = ticketType.valueOf(typeStr);
+        TicketType type = TicketType.valueOf(typeStr);
 
-        // 2. Instanțiem clasa corectă folosind Jackson
         Ticket ticket = null;
 
         switch (type) {
@@ -29,7 +35,7 @@ public class ticketFactory {
                 ticket = mapper.treeToValue(commandNode, Bug.class);
                 break;
             case FEATURE_REQUEST:
-                ticket = mapper.treeToValue(commandNode, featureRequest.class);
+                ticket = mapper.treeToValue(commandNode, FeatureRequest.class);
                 break;
             case UI_FEEDBACK:
                 ticket = mapper.treeToValue(commandNode, UIFeedback.class);
@@ -37,9 +43,6 @@ public class ticketFactory {
             default:
                 throw new IllegalArgumentException("Unknown ticket type: " + type);
         }
-
-        // 3. Setăm manual câmpuri care nu sunt direct în structura tichetului din comandă
-        // De exemplu, 'username' din comandă devine 'reportedBy' în tichet
 
 
         return ticket;

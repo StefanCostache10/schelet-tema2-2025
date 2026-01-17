@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import model.ticket.Bug;
 import model.ticket.Ticket;
 import model.ticket.UIFeedback;
-import model.ticket.featureRequest;
-import model.enums.ticketStatus;
+import model.ticket.FeatureRequest;
+import model.enums.TicketStatus;
 import repository.Database;
 
 import java.util.ArrayList;
@@ -15,14 +15,44 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class TicketRiskStrategy implements MetricStrategy {
+public final class TicketRiskStrategy implements MetricStrategy {
+
+    private static final double PERCENTAGE_MULTIPLIER = 100.0;
+    private static final double BUG_MAX_SCORE = 12.0;
+    private static final double FEATURE_MAX_SCORE = 20.0;
+    private static final double UI_MAX_SCORE = 100.0;
+    private static final int UI_USABILITY_BASE = 11;
+
+    private static final double RISK_NEGLIGIBLE_THRESHOLD = 25.0;
+    private static final double RISK_MODERATE_THRESHOLD = 50.0;
+    private static final double RISK_SIGNIFICANT_THRESHOLD = 75.0;
+
+    private static final int SEVERITY_MINOR = 1;
+    private static final int SEVERITY_MODERATE = 2;
+    private static final int SEVERITY_SEVERE = 3;
+
+    private static final int FREQUENCY_RARE = 1;
+    private static final int FREQUENCY_OCCASIONAL = 2;
+    private static final int FREQUENCY_FREQUENT = 3;
+    private static final int FREQUENCY_ALWAYS = 4;
+
+    private static final int BUSINESS_VALUE_S = 1;
+    private static final int BUSINESS_VALUE_M = 3;
+    private static final int BUSINESS_VALUE_L = 6;
+    private static final int BUSINESS_VALUE_XL = 10;
+
+    private static final int DEMAND_LOW = 1;
+    private static final int DEMAND_MEDIUM = 3;
+    private static final int DEMAND_HIGH = 6;
+    private static final int DEMAND_VERY_HIGH = 10;
 
     @Override
-    public ObjectNode calculate(ObjectMapper mapper, Database db) {
+    public ObjectNode calculate(final ObjectMapper mapper, final Database db) {
         ObjectNode reportNode = mapper.createObjectNode();
 
         List<Ticket> activeTickets = db.getTickets().stream()
-                .filter(t -> t.getStatus() == ticketStatus.OPEN || t.getStatus() == ticketStatus.IN_PROGRESS)
+                .filter(t -> t.getStatus() == TicketStatus.OPEN
+                        || t.getStatus() == TicketStatus.IN_PROGRESS)
                 .collect(Collectors.toList());
 
         reportNode.put("totalTickets", activeTickets.size());
@@ -56,10 +86,12 @@ public class TicketRiskStrategy implements MetricStrategy {
                     score = calculateBugRisk((Bug) t);
                     break;
                 case FEATURE_REQUEST:
-                    score = calculateFeatureRisk((featureRequest) t);
+                    score = calculateFeatureRisk((FeatureRequest) t);
                     break;
                 case UI_FEEDBACK:
                     score = calculateUIRisk((UIFeedback) t);
+                    break;
+                default:
                     break;
             }
             scoresByType.get(type).add(score);
@@ -76,97 +108,106 @@ public class TicketRiskStrategy implements MetricStrategy {
 
         ObjectNode riskNode = reportNode.putObject("riskByType");
         riskNode.put("BUG", getRiskLabel(calculateAverage(scoresByType.get("BUG"))));
-        riskNode.put("FEATURE_REQUEST", getRiskLabel(calculateAverage(scoresByType.get("FEATURE_REQUEST"))));
-        riskNode.put("UI_FEEDBACK", getRiskLabel(calculateAverage(scoresByType.get("UI_FEEDBACK"))));
+        riskNode.put("FEATURE_REQUEST",
+                getRiskLabel(calculateAverage(scoresByType.get("FEATURE_REQUEST"))));
+        riskNode.put("UI_FEEDBACK",
+                getRiskLabel(calculateAverage(scoresByType.get("UI_FEEDBACK"))));
 
         return reportNode;
     }
 
-    private double calculateAverage(List<Double> scores) {
-        if (scores.isEmpty()) return 0.0;
+    private double calculateAverage(final List<Double> scores) {
+        if (scores.isEmpty()) {
+            return 0.0;
+        }
         double sum = 0.0;
-        for (Double s : scores) sum += s;
+        for (Double s : scores) {
+            sum += s;
+        }
         return sum / scores.size();
     }
 
-    private String getRiskLabel(double score) {
-        if (score < 25.0) return "NEGLIGIBLE";
-        if (score < 50.0) return "MODERATE";
-        if (score < 75.0) return "SIGNIFICANT";
+    private String getRiskLabel(final double score) {
+        if (score < RISK_NEGLIGIBLE_THRESHOLD) {
+            return "NEGLIGIBLE";
+        }
+        if (score < RISK_MODERATE_THRESHOLD) {
+            return "MODERATE";
+        }
+        if (score < RISK_SIGNIFICANT_THRESHOLD) {
+            return "SIGNIFICANT";
+        }
         return "MAJOR";
     }
 
-    // --- FORMULE RISC ---
-
-    private double calculateBugRisk(Bug b) {
-        // Formula: frequency * severityFactor
-        // Max: 4 * 3 = 12
+    private double calculateBugRisk(final Bug b) {
         int f = getFrequencyValue(b.getFrequency());
         int s = getSeverityValue(b.getSeverity());
         double raw = (double) (f * s);
-        return (raw * 100.0) / 12.0;
+        return (raw * PERCENTAGE_MULTIPLIER) / BUG_MAX_SCORE;
     }
 
-    private double calculateFeatureRisk(featureRequest f) {
-        // Formula: businessValue + customerDemand
-        // Max: 10 + 10 = 20
+    private double calculateFeatureRisk(final FeatureRequest f) {
         int v = getBusinessValue(f.getBusinessValue());
         int d = getDemandValue(f.getCustomerDemand());
         double raw = (double) (v + d);
-        return (raw * 100.0) / 20.0;
+        return (raw * PERCENTAGE_MULTIPLIER) / FEATURE_MAX_SCORE;
     }
 
-    private double calculateUIRisk(UIFeedback u) {
-        // Formula: (11 - usabilityScore) * businessValue
-        // Max: (11 - 1) * 10 = 100
+    private double calculateUIRisk(final UIFeedback u) {
         int v = getBusinessValue(u.getBusinessValue());
         int usb = u.getUsabilityScore() != null ? u.getUsabilityScore() : 0;
-        double raw = (double) ((11 - usb) * v);
-        return (raw * 100.0) / 100.0;
+        double raw = (double) ((UI_USABILITY_BASE - usb) * v);
+        return (raw * PERCENTAGE_MULTIPLIER) / UI_MAX_SCORE;
     }
 
-    // --- HELPER VALUES (Same as CustomerImpact) ---
-    // Repetă metodele private pentru consistență
-
-    private int getSeverityValue(String s) {
-        if (s == null) return 0;
+    private int getSeverityValue(final String s) {
+        if (s == null) {
+            return 0;
+        }
         switch (s) {
-            case "MINOR": return 1;
-            case "MODERATE": return 2;
-            case "SEVERE": return 3;
+            case "MINOR": return SEVERITY_MINOR;
+            case "MODERATE": return SEVERITY_MODERATE;
+            case "SEVERE": return SEVERITY_SEVERE;
             default: return 0;
         }
     }
 
-    private int getFrequencyValue(String f) {
-        if (f == null) return 0;
+    private int getFrequencyValue(final String f) {
+        if (f == null) {
+            return 0;
+        }
         switch (f) {
-            case "RARE": return 1;
-            case "OCCASIONAL": return 2;
-            case "FREQUENT": return 3;
-            case "ALWAYS": return 4;
+            case "RARE": return FREQUENCY_RARE;
+            case "OCCASIONAL": return FREQUENCY_OCCASIONAL;
+            case "FREQUENT": return FREQUENCY_FREQUENT;
+            case "ALWAYS": return FREQUENCY_ALWAYS;
             default: return 0;
         }
     }
 
-    private int getBusinessValue(String val) {
-        if (val == null) return 0;
+    private int getBusinessValue(final String val) {
+        if (val == null) {
+            return 0;
+        }
         switch (val) {
-            case "S": return 1;
-            case "M": return 3;
-            case "L": return 6;
-            case "XL": return 10;
+            case "S": return BUSINESS_VALUE_S;
+            case "M": return BUSINESS_VALUE_M;
+            case "L": return BUSINESS_VALUE_L;
+            case "XL": return BUSINESS_VALUE_XL;
             default: return 0;
         }
     }
 
-    private int getDemandValue(String d) {
-        if (d == null) return 0;
+    private int getDemandValue(final String d) {
+        if (d == null) {
+            return 0;
+        }
         switch (d) {
-            case "LOW": return 1;
-            case "MEDIUM": return 3;
-            case "HIGH": return 6;
-            case "VERY_HIGH": return 10;
+            case "LOW": return DEMAND_LOW;
+            case "MEDIUM": return DEMAND_MEDIUM;
+            case "HIGH": return DEMAND_HIGH;
+            case "VERY_HIGH": return DEMAND_VERY_HIGH;
             default: return 0;
         }
     }

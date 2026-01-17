@@ -11,13 +11,15 @@ import repository.Database;
 
 import java.util.List;
 
-public class GenerateTicketRiskReportCommand implements Command {
+public final class GenerateTicketRiskReportCommand implements Command {
     private final JsonNode commandNode;
     private final List<ObjectNode> outputs;
     private final ObjectMapper mapper;
     private final Database db;
 
-    public GenerateTicketRiskReportCommand(JsonNode commandNode, List<ObjectNode> outputs, ObjectMapper mapper) {
+    public GenerateTicketRiskReportCommand(final JsonNode commandNode,
+                                           final List<ObjectNode> outputs,
+                                           final ObjectMapper mapper) {
         this.commandNode = commandNode;
         this.outputs = outputs;
         this.mapper = mapper;
@@ -29,34 +31,31 @@ public class GenerateTicketRiskReportCommand implements Command {
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
 
-        // 1. Verificare User
         User user = db.findUserByUsername(username);
         if (user == null) {
             ObjectNode error = mapper.createObjectNode();
             error.put("command", "generateTicketRiskReport");
             error.put("username", username);
             error.put("timestamp", timestamp);
-            error.put("error", "User not found."); // Mesaj generic, ajustează dacă e specificat altfel
+            error.put("error", "User not found.");
             outputs.add(error);
             return;
         }
 
-        // 2. Verificare Permisiuni (Manager)
         if (user.getRole() != model.enums.Role.MANAGER) {
             ObjectNode error = mapper.createObjectNode();
             error.put("command", "generateTicketRiskReport");
             error.put("username", username);
             error.put("timestamp", timestamp);
-            error.put("error", "The user does not have permission to execute this command: required role MANAGER; user role " + user.getRole() + ".");
+            error.put("error", "The user does not have permission to execute this command: "
+                    + "required role MANAGER; user role " + user.getRole() + ".");
             outputs.add(error);
             return;
         }
 
-        // 3. Executare Strategie
         MetricStrategy strategy = new TicketRiskStrategy();
         ObjectNode reportData = strategy.calculate(mapper, db);
 
-        // 4. Output
         ObjectNode output = mapper.createObjectNode();
         output.put("command", "generateTicketRiskReport");
         output.put("username", username);

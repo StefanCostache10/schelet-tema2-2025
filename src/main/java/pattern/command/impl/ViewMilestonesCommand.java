@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import model.Milestone;
 import model.ticket.Ticket;
 import model.enums.Role;
-import model.enums.ticketStatus;
+import model.enums.TicketStatus;
 import model.user.User;
 import pattern.command.Command;
 import repository.Database;
@@ -18,13 +18,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ViewMilestonesCommand implements Command {
+public final class ViewMilestonesCommand implements Command {
     private final JsonNode commandNode;
     private final List<ObjectNode> outputList;
     private final ObjectMapper mapper;
     private final Database db;
 
-    public ViewMilestonesCommand(JsonNode commandNode, List<ObjectNode> outputList, ObjectMapper mapper) {
+    public ViewMilestonesCommand(final JsonNode commandNode, final List<ObjectNode> outputList,
+                                 final ObjectMapper mapper) {
         this.commandNode = commandNode;
         this.outputList = outputList;
         this.mapper = mapper;
@@ -37,7 +38,9 @@ public class ViewMilestonesCommand implements Command {
         String timestamp = commandNode.get("timestamp").asText();
         User user = db.findUserByUsername(username);
 
-        if (user == null) return;
+        if (user == null) {
+            return;
+        }
 
         List<Milestone> filtered;
         if (user.getRole() == Role.MANAGER) {
@@ -77,34 +80,32 @@ public class ViewMilestonesCommand implements Command {
                     .collect(Collectors.toList());
 
             List<Integer> open = milestoneTickets.stream()
-                    .filter(t -> t.getStatus() != ticketStatus.CLOSED)
+                    .filter(t -> t.getStatus() != TicketStatus.CLOSED)
                     .map(Ticket::getId).collect(Collectors.toList());
             List<Integer> closed = milestoneTickets.stream()
-                    .filter(t -> t.getStatus() == ticketStatus.CLOSED)
+                    .filter(t -> t.getStatus() == TicketStatus.CLOSED)
                     .map(Ticket::getId).collect(Collectors.toList());
 
             mNode.set("openTickets", mapper.valueToTree(open));
             mNode.set("closedTickets", mapper.valueToTree(closed));
 
-            double progress = milestoneTickets.isEmpty() ? 0.0 : (double) closed.size() / milestoneTickets.size();
+            double progress = milestoneTickets.isEmpty() ? 0.0
+                    : (double) closed.size() / milestoneTickets.size();
             mNode.put("completionPercentage", Math.round(progress * 100.0) / 100.0);
 
             LocalDate due = LocalDate.parse(m.getDueDate());
             boolean isFinished = !milestoneTickets.isEmpty() && open.isEmpty();
 
-            // Statusul este COMPLETED dacă e terminat, altfel ACTIVE
             mNode.put("status", isFinished ? "COMPLETED" : "ACTIVE");
             mNode.put("isBlocked", db.isMilestoneBlocked(m));
 
-            // Logica pentru Date: Dacă e terminat, calculăm față de data ultimului tichet închis
             LocalDate referenceDate = now;
             if (isFinished) {
-                // Găsim cea mai târzie dată de închidere
                 String maxClosedAt = milestoneTickets.stream()
                         .map(Ticket::getClosedAt)
                         .filter(s -> s != null && !s.isEmpty())
                         .max(String::compareTo)
-                        .orElse(timestamp); // Fallback, deși n-ar trebui
+                        .orElse(timestamp);
                 referenceDate = LocalDate.parse(maxClosedAt);
             }
 

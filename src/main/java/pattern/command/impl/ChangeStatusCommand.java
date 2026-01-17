@@ -4,18 +4,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import model.ticket.Ticket;
-import model.enums.ticketStatus;
+import model.enums.TicketStatus;
 import pattern.command.Command;
 import repository.Database;
 import java.util.List;
 
-public class ChangeStatusCommand implements Command {
+public final class ChangeStatusCommand implements Command {
     private final JsonNode commandNode;
     private final List<ObjectNode> outputList;
     private final ObjectMapper mapper;
     private final Database db = Database.getInstance();
 
-    public ChangeStatusCommand(JsonNode node, List<ObjectNode> out, ObjectMapper mapper) {
+    public ChangeStatusCommand(final JsonNode node, final List<ObjectNode> out,
+                               final ObjectMapper mapper) {
         this.commandNode = node;
         this.outputList = out;
         this.mapper = mapper;
@@ -28,29 +29,34 @@ public class ChangeStatusCommand implements Command {
         String timestamp = commandNode.get("timestamp").asText();
 
         Ticket ticket = db.findTicketById(ticketId);
-        if (ticket == null) return;
+        if (ticket == null) {
+            return;
+        }
 
-        if (ticket.getStatus() == ticketStatus.CLOSED) return;
+        if (ticket.getStatus() == TicketStatus.CLOSED) {
+            return;
+        }
 
         if (!username.equals(ticket.getAssignedTo())) {
             ObjectNode err = mapper.createObjectNode();
             err.put("command", "changeStatus");
             err.put("username", username);
             err.put("timestamp", timestamp);
-            err.put("error", "Ticket " + ticketId + " is not assigned to developer " + username + ".");
+            err.put("error", "Ticket " + ticketId + " is not assigned to developer "
+                    + username + ".");
             outputList.add(err);
             return;
         }
 
-        ticketStatus oldStatus = ticket.getStatus();
-        ticketStatus newStatus = null;
+        TicketStatus oldStatus = ticket.getStatus();
+        TicketStatus newStatus = null;
 
-        if (oldStatus == ticketStatus.IN_PROGRESS) {
-            newStatus = ticketStatus.RESOLVED;
+        if (oldStatus == TicketStatus.IN_PROGRESS) {
+            newStatus = TicketStatus.RESOLVED;
             ticket.setStatus(newStatus);
             ticket.setSolvedAt(timestamp);
-        } else if (oldStatus == ticketStatus.RESOLVED) {
-            newStatus = ticketStatus.CLOSED;
+        } else if (oldStatus == TicketStatus.RESOLVED) {
+            newStatus = TicketStatus.CLOSED;
             ticket.setStatus(newStatus);
             ticket.setClosedAt(timestamp);
         }
@@ -64,11 +70,9 @@ public class ChangeStatusCommand implements Command {
             action.put("action", "STATUS_CHANGED");
             ticket.addAction(action);
 
-            // --- MODIFICARE START: Verificare dependențe la închidere ---
-            if (newStatus == ticketStatus.CLOSED) {
+            if (newStatus == TicketStatus.CLOSED) {
                 db.checkDependenciesAfterClosingTicket(ticket);
             }
-            // --- MODIFICARE END ---
         }
     }
 }

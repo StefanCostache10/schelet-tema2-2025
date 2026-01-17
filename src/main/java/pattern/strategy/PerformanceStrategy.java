@@ -3,14 +3,15 @@ package pattern.strategy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import model.enums.Role;
+import model.enums.Seniority;
+import model.enums.TicketPriority;
+import model.enums.TicketStatus;
+import model.enums.TicketType;
 import model.ticket.Ticket;
 import model.user.Developer;
 import model.user.Manager;
 import model.user.User;
-import model.enums.Role;
-import model.enums.Seniority;
-import model.enums.ticketPriority;
-import model.enums.ticketStatus;
 import repository.Database;
 
 import java.time.LocalDate;
@@ -20,19 +21,33 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class PerformanceStrategy implements MetricStrategy {
+public final class PerformanceStrategy implements MetricStrategy {
+
+    private static final double PERCENTAGE_MULTIPLIER = 100.0;
+    private static final double JUNIOR_BASE_SCORE = 5.0;
+    private static final double MID_BASE_SCORE = 15.0;
+    private static final double SENIOR_BASE_SCORE = 30.0;
+
+    private static final double JUNIOR_TICKET_FACTOR = 0.5;
+    private static final double MID_TICKET_FACTOR = 0.5;
+    private static final double MID_PRIO_FACTOR = 0.7;
+    private static final double MID_TIME_FACTOR = 0.3;
+    private static final double SENIOR_TICKET_FACTOR = 0.5;
+    private static final double SENIOR_PRIO_FACTOR = 1.0;
+    private static final double SENIOR_TIME_FACTOR = 0.5;
+
+    private static final double TYPES_COUNT = 3.0;
 
     private final String commandTimestamp;
     private final String managerUsername;
 
-    public PerformanceStrategy(String managerUsername, String commandTimestamp) {
+    public PerformanceStrategy(final String managerUsername, final String commandTimestamp) {
         this.managerUsername = managerUsername;
         this.commandTimestamp = commandTimestamp;
     }
 
     @Override
-    public ObjectNode calculate(ObjectMapper mapper, Database db) {
-        // Creăm un wrapper temporar pentru a respecta semnătura (return ObjectNode)
+    public ObjectNode calculate(final ObjectMapper mapper, final Database db) {
         ObjectNode wrapper = mapper.createObjectNode();
         ArrayNode devsArray = wrapper.putArray("result");
 
@@ -58,7 +73,7 @@ public class PerformanceStrategy implements MetricStrategy {
             devNode.put("username", dev.getUsername());
 
             List<Ticket> devTickets = db.getTickets().stream()
-                    .filter(t -> t.getStatus() == ticketStatus.CLOSED)
+                    .filter(t -> t.getStatus() == TicketStatus.CLOSED)
                     .filter(t -> dev.getUsername().equals(t.getAssignedTo()))
                     .filter(t -> isClosedInMonth(t, targetMonth))
                     .collect(Collectors.toList());
@@ -79,18 +94,22 @@ public class PerformanceStrategy implements MetricStrategy {
         return wrapper;
     }
 
-    private boolean isClosedInMonth(Ticket t, YearMonth targetMonth) {
-        if (t.getClosedAt() == null || t.getClosedAt().isEmpty()) return false;
+    private boolean isClosedInMonth(final Ticket t, final YearMonth targetMonth) {
+        if (t.getClosedAt() == null || t.getClosedAt().isEmpty()) {
+            return false;
+        }
         LocalDate closedDate = LocalDate.parse(t.getClosedAt());
         return YearMonth.from(closedDate).equals(targetMonth);
     }
 
-    private double calculateAverageResolutionTime(List<Ticket> tickets) {
-        if (tickets.isEmpty()) return 0.0;
+    private double calculateAverageResolutionTime(final List<Ticket> tickets) {
+        if (tickets.isEmpty()) {
+            return 0.0;
+        }
         double totalDays = 0;
         for (Ticket t : tickets) {
-            if (t.getAssignedAt() != null && !t.getAssignedAt().isEmpty() &&
-                    t.getSolvedAt() != null && !t.getSolvedAt().isEmpty()) {
+            if (t.getAssignedAt() != null && !t.getAssignedAt().isEmpty()
+                    && t.getSolvedAt() != null && !t.getSolvedAt().isEmpty()) {
 
                 LocalDate start = LocalDate.parse(t.getAssignedAt());
                 LocalDate end = LocalDate.parse(t.getSolvedAt());
@@ -101,8 +120,11 @@ public class PerformanceStrategy implements MetricStrategy {
         return totalDays / tickets.size();
     }
 
-    private double calculateScore(Developer dev, List<Ticket> tickets, double avgResTime, Database db) {
-        if (tickets.isEmpty()) return 0.0;
+    private double calculateScore(final Developer dev, final List<Ticket> tickets,
+                                  final double avgResTime, final Database db) {
+        if (tickets.isEmpty()) {
+            return 0.0;
+        }
 
         int closedTickets = tickets.size();
         Seniority seniority = dev.getSeniority();
@@ -118,51 +140,62 @@ public class PerformanceStrategy implements MetricStrategy {
             case SENIOR:
                 score = calculateSeniorScore(tickets, closedTickets, avgResTime, db);
                 break;
+            default:
+                break;
         }
 
         return Math.max(0.0, score);
     }
 
-    private double calculateJuniorScore(List<Ticket> tickets, int closedTickets) {
-        long bugCount = tickets.stream().filter(t -> t.getType() == model.enums.ticketType.BUG).count();
-        long featureCount = tickets.stream().filter(t -> t.getType() == model.enums.ticketType.FEATURE_REQUEST).count();
-        long uiCount = tickets.stream().filter(t -> t.getType() == model.enums.ticketType.UI_FEEDBACK).count();
+    private double calculateJuniorScore(final List<Ticket> tickets, final int closedTickets) {
+        long bugCount = tickets.stream().filter(t -> t.getType() == TicketType.BUG).count();
+        long featureCount = tickets.stream()
+                .filter(t -> t.getType() == TicketType.FEATURE_REQUEST).count();
+        long uiCount = tickets.stream().filter(t -> t.getType() == TicketType.UI_FEEDBACK).count();
 
-        double avgType = (bugCount + featureCount + uiCount) / 3.0;
-        double variance = (Math.pow(bugCount - avgType, 2) + Math.pow(featureCount - avgType, 2) + Math.pow(uiCount - avgType, 2)) / 3.0;
+        double avgType = (bugCount + featureCount + uiCount) / TYPES_COUNT;
+        double variance = (Math.pow(bugCount - avgType, 2)
+                + Math.pow(featureCount - avgType, 2)
+                + Math.pow(uiCount - avgType, 2)) / TYPES_COUNT;
         double stdDev = Math.sqrt(variance);
 
         double diversityFactor = (avgType == 0) ? 0.0 : stdDev / avgType;
 
-        double base = 0.5 * closedTickets - diversityFactor;
-        return Math.max(0, base) + 5.0;
+        double base = JUNIOR_TICKET_FACTOR * closedTickets - diversityFactor;
+        return Math.max(0, base) + JUNIOR_BASE_SCORE;
     }
 
-    private double calculateMidScore(List<Ticket> tickets, int closedTickets, double avgResTime, Database db) {
+    private double calculateMidScore(final List<Ticket> tickets, final int closedTickets,
+                                     final double avgResTime, final Database db) {
         long highPrio = tickets.stream()
                 .filter(t -> {
-                    ticketPriority p = db.getCalculatedPriority(t, t.getSolvedAt());
-                    return p == ticketPriority.HIGH || p == ticketPriority.CRITICAL;
+                    TicketPriority p = db.getCalculatedPriority(t, t.getSolvedAt());
+                    return p == TicketPriority.HIGH || p == TicketPriority.CRITICAL;
                 })
                 .count();
 
-        double base = 0.5 * closedTickets + 0.7 * highPrio - 0.3 * avgResTime;
-        return Math.max(0, base) + 15.0;
+        double base = MID_TICKET_FACTOR * closedTickets
+                + MID_PRIO_FACTOR * highPrio
+                - MID_TIME_FACTOR * avgResTime;
+        return Math.max(0, base) + MID_BASE_SCORE;
     }
 
-    private double calculateSeniorScore(List<Ticket> tickets, int closedTickets, double avgResTime, Database db) {
+    private double calculateSeniorScore(final List<Ticket> tickets, final int closedTickets,
+                                        final double avgResTime, final Database db) {
         long highPrio = tickets.stream()
                 .filter(t -> {
-                    ticketPriority p = db.getCalculatedPriority(t, t.getSolvedAt());
-                    return p == ticketPriority.HIGH || p == ticketPriority.CRITICAL;
+                    TicketPriority p = db.getCalculatedPriority(t, t.getSolvedAt());
+                    return p == TicketPriority.HIGH || p == TicketPriority.CRITICAL;
                 })
                 .count();
 
-        double base = 0.5 * closedTickets + 1.0 * highPrio - 0.5 * avgResTime;
-        return Math.max(0, base) + 30.0;
+        double base = SENIOR_TICKET_FACTOR * closedTickets
+                + SENIOR_PRIO_FACTOR * highPrio
+                - SENIOR_TIME_FACTOR * avgResTime;
+        return Math.max(0, base) + SENIOR_BASE_SCORE;
     }
 
-    private double round(double value) {
-        return Math.round(value * 100.0) / 100.0;
+    private double round(final double value) {
+        return Math.round(value * PERCENTAGE_MULTIPLIER) / PERCENTAGE_MULTIPLIER;
     }
 }

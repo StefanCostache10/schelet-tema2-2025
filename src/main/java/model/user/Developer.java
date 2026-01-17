@@ -5,25 +5,45 @@ import model.enums.Expertise;
 import model.enums.Seniority;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Developer extends User {
+public final class Developer extends User {
     private String hireDate;
     private Expertise expertiseArea;
     private Seniority seniority;
-    private double performanceScore = 0.0; // Câmp nou necesar pentru Search
+    private double performanceScore = 0.0;
 
     public Developer() {
         super();
     }
 
-    // Getters
-    public String getHireDate() { return hireDate; }
-    public Expertise getExpertiseArea() { return expertiseArea; }
-    public Seniority getSeniority() { return seniority; }
-    public double getPerformanceScore() { return performanceScore; }
+    public String getHireDate() {
+        return hireDate;
+    }
 
-    // Setters
-    public void setHireDate(String hireDate) { this.hireDate = hireDate; }
-    public void setExpertiseArea(Expertise expertiseArea) { this.expertiseArea = expertiseArea; }
-    public void setSeniority(Seniority seniority) { this.seniority = seniority; }
-    public void setPerformanceScore(double performanceScore) { this.performanceScore = performanceScore; }
+    public Expertise getExpertiseArea() {
+        return expertiseArea;
+    }
+
+    public Seniority getSeniority() {
+        return seniority;
+    }
+
+    public double getPerformanceScore() {
+        return performanceScore;
+    }
+
+    public void setHireDate(final String hireDate) {
+        this.hireDate = hireDate;
+    }
+
+    public void setExpertiseArea(final Expertise expertiseArea) {
+        this.expertiseArea = expertiseArea;
+    }
+
+    public void setSeniority(final Seniority seniority) {
+        this.seniority = seniority;
+    }
+
+    public void setPerformanceScore(final double performanceScore) {
+        this.performanceScore = performanceScore;
+    }
 }

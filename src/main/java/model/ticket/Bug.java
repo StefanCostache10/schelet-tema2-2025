@@ -2,9 +2,8 @@ package model.ticket;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class Bug extends Ticket {
+public final class Bug extends Ticket {
 
-    // Folosim WRITE_ONLY: citim din JSON (Input), dar nu scriem în JSON (Output)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String expectedBehavior;
 
@@ -23,24 +22,55 @@ public class Bug extends Ticket {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Integer errorCode;
 
-    public Bug() { super(); }
+    public Bug() {
+        super();
+    }
 
-    // Getters and Setters
-    public String getExpectedBehavior() { return expectedBehavior; }
-    public void setExpectedBehavior(String expectedBehavior) { this.expectedBehavior = expectedBehavior; }
+    public String getExpectedBehavior() {
+        return expectedBehavior;
+    }
 
-    public String getActualBehavior() { return actualBehavior; }
-    public void setActualBehavior(String actualBehavior) { this.actualBehavior = actualBehavior; }
+    public void setExpectedBehavior(final String expectedBehavior) {
+        this.expectedBehavior = expectedBehavior;
+    }
 
-    public String getFrequency() { return frequency; }
-    public void setFrequency(String frequency) { this.frequency = frequency; }
+    public String getActualBehavior() {
+        return actualBehavior;
+    }
 
-    public String getSeverity() { return severity; }
-    public void setSeverity(String severity) { this.severity = severity; }
+    public void setActualBehavior(final String actualBehavior) {
+        this.actualBehavior = actualBehavior;
+    }
 
-    public String getEnvironment() { return environment; }
-    public void setEnvironment(String environment) { this.environment = environment; }
+    public String getFrequency() {
+        return frequency;
+    }
 
-    public Integer getErrorCode() { return errorCode; }
-    public void setErrorCode(Integer errorCode) { this.errorCode = errorCode; }
+    public void setFrequency(final String frequency) {
+        this.frequency = frequency;
+    }
+
+    public String getSeverity() {
+        return severity;
+    }
+
+    public void setSeverity(final String severity) {
+        this.severity = severity;
+    }
+
+    public String getEnvironment() {
+        return environment;
+    }
+
+    public void setEnvironment(final String environment) {
+        this.environment = environment;
+    }
+
+    public Integer getErrorCode() {
+        return errorCode;
+    }
+
+    public void setErrorCode(final Integer errorCode) {
+        this.errorCode = errorCode;
+    }
 }

@@ -11,14 +11,18 @@ import repository.Database;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class ViewTicketHistoryCommand implements Command {
+public final class ViewTicketHistoryCommand implements Command {
     private final JsonNode commandNode;
     private final List<ObjectNode> outputList;
     private final ObjectMapper mapper;
     private final Database db = Database.getInstance();
 
-    public ViewTicketHistoryCommand(JsonNode node, List<ObjectNode> out, ObjectMapper mapper) {
-        this.commandNode = node; this.outputList = out; this.mapper = mapper;
+    public ViewTicketHistoryCommand(final JsonNode node,
+                                    final List<ObjectNode> out,
+                                    final ObjectMapper mapper) {
+        this.commandNode = node;
+        this.outputList = out;
+        this.mapper = mapper;
     }
 
     @Override
@@ -32,11 +36,9 @@ public class ViewTicketHistoryCommand implements Command {
         result.put("timestamp", timestamp);
         ArrayNode historyArray = result.putArray("ticketHistory");
 
-        // --- Logica de filtrare extinsă pentru a include tichetele unde userul a avut activitate ---
         List<Ticket> ticketsToView = db.getTickets().stream()
                 .filter(t -> isRelevantForUser(t, username))
                 .collect(Collectors.toList());
-        // ------------------------------------------------------------------------------------------
 
         for (Ticket ticket : ticketsToView) {
             ObjectNode tNode = mapper.createObjectNode();
@@ -49,14 +51,13 @@ public class ViewTicketHistoryCommand implements Command {
                 ticket.getActions().forEach(actionsArray::add);
             }
 
-            // Corectat cheile pentru comentarii
             ArrayNode commentsArray = tNode.putArray("comments");
             if (ticket.getComments() != null) {
                 for (Comment c : ticket.getComments()) {
                     ObjectNode cNode = mapper.createObjectNode();
                     cNode.put("author", c.getAuthor());
-                    cNode.put("content", c.getContent());      // Corectat: 'text' -> 'content'
-                    cNode.put("createdAt", c.getCreatedAt());  // Corectat: 'timestamp' -> 'createdAt'
+                    cNode.put("content", c.getContent());
+                    cNode.put("createdAt", c.getCreatedAt());
                     commentsArray.add(cNode);
                 }
             }
@@ -67,13 +68,10 @@ public class ViewTicketHistoryCommand implements Command {
         outputList.add(result);
     }
 
-    // Metoda ajutătoare pentru a determina relevanța unui tichet
-    private boolean isRelevantForUser(Ticket t, String username) {
-        // Dacă este reporter sau assignee curent
+    private boolean isRelevantForUser(final Ticket t, final String username) {
         if (username.equals(t.getReportedBy()) || username.equals(t.getAssignedTo())) {
             return true;
         }
-        // Dacă userul apare în istoricul de acțiuni (a lucrat la el în trecut)
         if (t.getActions() != null) {
             for (JsonNode action : t.getActions()) {
                 if (action.has("by") && action.get("by").asText().equals(username)) {

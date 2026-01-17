@@ -7,17 +7,17 @@ import model.Milestone;
 import model.ticket.Ticket;
 import model.enums.Role;
 import model.user.User;
-import pattern.command.Command;
 import repository.Database;
 import java.util.List;
 
-public class CreateMilestoneCommand implements Command {
+public final class CreateMilestoneCommand implements Command {
     private final JsonNode commandNode;
     private final List<ObjectNode> outputList;
     private final ObjectMapper mapper;
     private final Database db;
 
-    public CreateMilestoneCommand(JsonNode commandNode, List<ObjectNode> outputList, ObjectMapper mapper) {
+    public CreateMilestoneCommand(final JsonNode commandNode, final List<ObjectNode> outputList,
+                                  final ObjectMapper mapper) {
         this.commandNode = commandNode;
         this.outputList = outputList;
         this.mapper = mapper;
@@ -35,7 +35,8 @@ public class CreateMilestoneCommand implements Command {
             errorJson.put("command", "createMilestone");
             errorJson.put("username", username);
             errorJson.put("timestamp", timestamp);
-            errorJson.put("error", "The user does not have permission to execute this command: required role MANAGER; user role " + user.getRole() + ".");
+            errorJson.put("error", "The user does not have permission to execute this command: "
+                    + "required role MANAGER; user role " + user.getRole() + ".");
             outputList.add(errorJson);
             return;
         }
@@ -48,19 +49,19 @@ public class CreateMilestoneCommand implements Command {
             for (Integer ticketId : milestone.getTickets()) {
                 Milestone existing = db.findMilestoneForTicket(ticketId);
                 if (existing != null) {
-                    addError(username, "Tickets " + ticketId + " already assigned to milestone " + existing.getName() + ".", timestamp);
+                    addError(username, "Tickets " + ticketId + " already assigned to milestone "
+                            + existing.getName() + ".", timestamp);
                     return;
                 }
             }
 
             db.addMilestone(milestone);
 
-            // --- MODIFICARE START: Notificare imediată la crearea milestone-ului ---
-            String notification = "New milestone " + milestone.getName() + " has been created with due date " + milestone.getDueDate() + ".";
+            String notification = "New milestone " + milestone.getName()
+                    + " has been created with due date "
+                    + milestone.getDueDate() + ".";
             db.notifyAssignedDevelopers(milestone, notification);
-            // --- MODIFICARE END ---
 
-            // --- LOGICĂ PENTRU ISTORIC ---
             for (Integer ticketId : milestone.getTickets()) {
                 Ticket t = db.findTicketById(ticketId);
                 if (t != null) {
@@ -72,14 +73,14 @@ public class CreateMilestoneCommand implements Command {
                     t.addAction(action);
                 }
             }
-            // ----------------------------------
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void addError(String username, String errorMessage, String timestamp) {
+    private void addError(final String username, final String errorMessage,
+                          final String timestamp) {
         ObjectNode errorJson = mapper.createObjectNode();
         errorJson.put("command", "createMilestone");
         errorJson.put("username", username);

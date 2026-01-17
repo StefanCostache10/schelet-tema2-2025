@@ -9,12 +9,13 @@ import pattern.command.Command;
 import repository.Database;
 import java.util.List;
 
-public class ViewNotificationsCommand implements Command {
+public final class ViewNotificationsCommand implements Command {
     private final JsonNode commandNode;
     private final List<ObjectNode> outputs;
     private final ObjectMapper mapper;
 
-    public ViewNotificationsCommand(JsonNode commandNode, List<ObjectNode> outputs, ObjectMapper mapper) {
+    public ViewNotificationsCommand(final JsonNode commandNode, final List<ObjectNode> outputs,
+                                    final ObjectMapper mapper) {
         this.commandNode = commandNode;
         this.outputs = outputs;
         this.mapper = mapper;
@@ -32,7 +33,6 @@ public class ViewNotificationsCommand implements Command {
             outputNode.put("username", username);
             outputNode.put("timestamp", timestamp);
 
-            // Luăm notificările și le punem în JSON
             List<String> notifications = user.getNotifications();
             ArrayNode notificationsArray = outputNode.putArray("notifications");
             for (String notif : notifications) {
@@ -41,7 +41,6 @@ public class ViewNotificationsCommand implements Command {
 
             outputs.add(outputNode);
 
-            // Ștergem notificările după vizualizare
             user.clearNotifications();
         }
     }
