@@ -1,14 +1,22 @@
 package repository;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import model.Milestone;
+import model.enums.Expertise;
+import model.enums.Seniority;
 import model.enums.TicketPriority;
 import model.enums.TicketStatus;
+import model.enums.TicketType;
 import model.ticket.Ticket;
+import model.user.Developer;
 import model.user.User;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public final class Database {
@@ -61,19 +69,20 @@ public final class Database {
         LocalDate created = LocalDate.parse(m.getCreatedAt());
         LocalDate due = LocalDate.parse(m.getDueDate());
 
-        if (now.isAfter(due.minusDays(2))) {
-            return TicketPriority.CRITICAL;
-        }
-
-        long days = ChronoUnit.DAYS.between(created, now);
-        int steps = (int) (days / DAYS_FOR_PRIORITY_INCREASE);
-
         TicketPriority p = ticket.getBusinessPriority();
-        for (int i = 0; i < steps; i++) {
-            p = p.next();
+
+        if (now.isAfter(due.minusDays(2))) {
+            p = TicketPriority.CRITICAL;
+        } else {
+            long days = ChronoUnit.DAYS.between(created, now);
+            int steps = (int) (days / DAYS_FOR_PRIORITY_INCREASE);
+
+            for (int i = 0; i < steps; i++) {
+                p = p.next();
+            }
         }
 
-        checkPrioritySeniorityConflict(ticket, p);
+        checkPrioritySeniorityConflict(ticket, p, currentTimestamp);
 
         return p;
     }
@@ -88,11 +97,9 @@ public final class Database {
 
         if (currentSystemDate == null) {
             currentSystemDate = newDate;
-            // Check inițial (poate inputul începe direct cu o zi înainte de deadline)
             checkMilestoneDeadlines(currentSystemDate);
             return;
         }
-
 
         while (currentSystemDate.isBefore(newDate)) {
             currentSystemDate = currentSystemDate.plusDays(1);
@@ -197,13 +204,50 @@ public final class Database {
     }
 
     private void checkPrioritySeniorityConflict(final Ticket ticket,
-                                                final TicketPriority calculated) {
+                                                final TicketPriority calculated,
+                                                final String timestamp) {
         if (ticket.getStatus() == TicketStatus.IN_PROGRESS && !ticket.getAssignedTo().isEmpty()) {
-            User dev = findUserByUsername(ticket.getAssignedTo());
-            if (dev instanceof model.user.Developer) {
-                return;
+            User user = findUserByUsername(ticket.getAssignedTo());
+            if (user instanceof Developer) {
+                Developer dev = (Developer) user;
+                List<Seniority> required = getRequiredSeniorities(ticket.getType(), calculated);
+                if (!required.contains(dev.getSeniority())) {
+                    // Unassign
+                    ticket.setStatus(TicketStatus.OPEN);
+                    String oldDev = ticket.getAssignedTo();
+                    ticket.setAssignedTo("");
+                    ticket.setAssignedAt("");
+
+                    ObjectNode action = JsonNodeFactory.instance.objectNode();
+                    action.put("from", oldDev);
+                    action.put("timestamp", timestamp);
+                    action.put("action", "REMOVED_FROM_DEV");
+                    action.put("by", "system");
+                    ticket.addAction(action);
+                }
             }
         }
+    }
+
+    private List<Seniority> getRequiredSeniorities(final TicketType type,
+                                                   final TicketPriority priority) {
+        List<Seniority> res = new ArrayList<>();
+        if (type == TicketType.FEATURE_REQUEST) {
+            if (priority == TicketPriority.CRITICAL) {
+                res.add(Seniority.SENIOR);
+            } else {
+                res.addAll(Arrays.asList(Seniority.MID, Seniority.SENIOR));
+            }
+        } else {
+            if (priority == TicketPriority.CRITICAL) {
+                res.add(Seniority.SENIOR);
+            } else if (priority == TicketPriority.HIGH) {
+                res.addAll(Arrays.asList(Seniority.MID, Seniority.SENIOR));
+            } else {
+                res.addAll(Arrays.asList(Seniority.JUNIOR, Seniority.MID, Seniority.SENIOR));
+            }
+        }
+        return res;
     }
 
     /**

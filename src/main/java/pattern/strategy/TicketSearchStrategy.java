@@ -68,6 +68,14 @@ public final class TicketSearchStrategy implements SearchStrategy {
                     .collect(Collectors.toList());
         }
 
+        // --- 3.1 Filtrare după data creării (createdBefore) ---
+        if (filters.has("createdBefore")) {
+            String dateStr = filters.get("createdBefore").asText();
+            tickets = tickets.stream()
+                    .filter(t -> t.getTimestamp().compareTo(dateStr) < 0)
+                    .collect(Collectors.toList());
+        }
+
         // --- 4. Filtrare după cuvinte cheie (keywords) ---
         List<String> keywords = new ArrayList<>();
         if (filters.has("keywords")) {

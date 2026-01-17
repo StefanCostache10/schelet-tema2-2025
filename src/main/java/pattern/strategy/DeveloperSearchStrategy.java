@@ -7,6 +7,8 @@ import model.enums.Expertise;
 import model.enums.Role;
 import model.enums.Seniority;
 import model.user.Developer;
+import model.user.Manager;
+import model.user.User;
 import repository.Database;
 
 import java.util.ArrayList;
@@ -19,9 +21,18 @@ public final class DeveloperSearchStrategy implements SearchStrategy {
     public List<ObjectNode> search(final JsonNode filters, final String requesterUsername,
                                    final ObjectMapper mapper, final Database db,
                                    final String timestamp) {
+        User requester = db.findUserByUsername(requesterUsername);
+        List<String> allowedUsernames = null;
+        if (requester != null && requester.getRole() == Role.MANAGER) {
+            allowedUsernames = ((Manager) requester).getSubordinates();
+        }
+
+        List<String> finalAllowedUsernames = allowedUsernames;
         List<Developer> developers = db.getUsers().stream()
                 .filter(u -> u.getRole() == Role.DEVELOPER)
                 .map(u -> (Developer) u)
+                .filter(d -> finalAllowedUsernames == null
+                        || finalAllowedUsernames.contains(d.getUsername()))
                 .collect(Collectors.toList());
 
         // Filtrare după expertiză
@@ -37,6 +48,20 @@ public final class DeveloperSearchStrategy implements SearchStrategy {
             String senStr = filters.get("seniority").asText();
             developers = developers.stream()
                     .filter(d -> d.getSeniority() == Seniority.valueOf(senStr))
+                    .collect(Collectors.toList());
+        }
+
+        // Filtrare după performanceScore
+        if (filters.has("performanceScoreAbove")) {
+            double threshold = filters.get("performanceScoreAbove").asDouble();
+            developers = developers.stream()
+                    .filter(d -> d.getPerformanceScore() > threshold)
+                    .collect(Collectors.toList());
+        }
+        if (filters.has("performanceScoreBelow")) {
+            double threshold = filters.get("performanceScoreBelow").asDouble();
+            developers = developers.stream()
+                    .filter(d -> d.getPerformanceScore() < threshold)
                     .collect(Collectors.toList());
         }
 
