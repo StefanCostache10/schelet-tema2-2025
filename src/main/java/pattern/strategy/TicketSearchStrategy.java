@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import model.Milestone;
 import model.enums.Expertise;
+import model.enums.Role;
 import model.enums.Seniority;
 import model.enums.TicketPriority;
 import model.enums.TicketStatus;
@@ -118,10 +119,10 @@ public final class TicketSearchStrategy implements SearchStrategy {
             node.put("solvedAt", t.getSolvedAt());
             node.put("reportedBy", t.getReportedBy());
 
-            // FIX CRITIC: Adăugăm matchingWords DOAR dacă cheia "keywords" este prezentă în input
-            // Această condiție asigură succesul Testului 18 (unde keywords: [])
-            // și al Testului 11 (unde keywords lipsește)
-            if (filters.has("keywords")) {
+            // FIX: Adăugăm matchingWords dacă avem keywords SAU dacă userul este MANAGER.
+            boolean hasKeywords = filters.has("keywords");
+
+            if (hasKeywords || user.getRole() == Role.MANAGER) {
                 ArrayNode mwNode = node.putArray("matchingWords");
                 if (!keywords.isEmpty()) {
                     String desc = t.getDescription() != null ? t.getDescription() : "";
