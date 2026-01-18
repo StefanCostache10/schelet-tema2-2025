@@ -30,6 +30,8 @@ public final class GenerateResolutionEfficiencyReportCommand implements Command 
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
 
+        db.updateCurrentDate(timestamp);
+
         User user = db.findUserByUsername(username);
         if (user == null || user.getRole() != model.enums.Role.MANAGER) {
             ObjectNode error = mapper.createObjectNode();

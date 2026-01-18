@@ -34,6 +34,8 @@ public final class ReportTicketCommand implements Command {
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
 
+        db.updateCurrentDate(timestamp);
+
         if (db.getAppStartDate() == null) {
             db.setAppStartDate(LocalDate.parse(timestamp));
         }
