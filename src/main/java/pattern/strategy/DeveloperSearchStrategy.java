@@ -35,7 +35,6 @@ public final class DeveloperSearchStrategy implements SearchStrategy {
                         || finalAllowedUsernames.contains(d.getUsername()))
                 .collect(Collectors.toList());
 
-        // Filtrare după expertiză
         if (filters.has("expertiseArea")) {
             String expStr = filters.get("expertiseArea").asText();
             developers = developers.stream()
@@ -43,7 +42,6 @@ public final class DeveloperSearchStrategy implements SearchStrategy {
                     .collect(Collectors.toList());
         }
 
-        // Filtrare după senioritate
         if (filters.has("seniority")) {
             String senStr = filters.get("seniority").asText();
             developers = developers.stream()
@@ -51,7 +49,6 @@ public final class DeveloperSearchStrategy implements SearchStrategy {
                     .collect(Collectors.toList());
         }
 
-        // Filtrare după performanceScore
         if (filters.has("performanceScoreAbove")) {
             double threshold = filters.get("performanceScoreAbove").asDouble();
             developers = developers.stream()
@@ -67,7 +64,6 @@ public final class DeveloperSearchStrategy implements SearchStrategy {
 
         developers.sort(Comparator.comparing(Developer::getUsername));
 
-        // Mappare rezultate
         List<ObjectNode> results = new ArrayList<>();
         for (Developer dev : developers) {
             ObjectNode node = mapper.createObjectNode();

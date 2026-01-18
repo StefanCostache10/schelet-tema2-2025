@@ -3,6 +3,7 @@ package repository;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import model.Milestone;
+import model.enums.Role;
 import model.enums.Seniority;
 import model.enums.TicketPriority;
 import model.enums.TicketStatus;
@@ -65,7 +66,6 @@ public final class Database {
 
         LocalDate now = LocalDate.parse(currentTimestamp);
 
-        // FIX: Dacă tichetul este CLOSED, oprim escaladarea la data închiderii.
         if (ticket.getStatus() == TicketStatus.CLOSED && !ticket.getClosedAt().isEmpty()) {
             LocalDate closedDate = LocalDate.parse(ticket.getClosedAt());
             if (now.isAfter(closedDate)) {
@@ -153,9 +153,6 @@ public final class Database {
     private void checkTicketPriorities(final LocalDate date) {
         String dateStr = date.toString();
         for (Ticket t : tickets) {
-            // Calculăm prioritatea (și verificăm conflicte de senioritate),
-            // dar nu suprascriem câmpul businessPriority de pe tichet,
-            // pentru a nu afecta calculul incremental bazat pe valoarea inițială.
             getCalculatedPriority(t, dateStr);
         }
     }
@@ -233,13 +230,11 @@ public final class Database {
             if (blockedM != null && !isMilestoneBlocked(blockedM)) {
                 LocalDate due = LocalDate.parse(blockedM.getDueDate());
 
-                // Dacă deblocarea are loc DUPĂ termen
                 if (currentSystemDate.isAfter(due)) {
                     String msg = "Milestone " + blockedM.getName()
                             + " was unblocked after due date. All active tickets are now CRITICAL.";
                     notifyAssignedDevelopers(blockedM, msg);
                 }
-                // Dacă deblocarea are loc ÎNAINTE de termen sau chiar la data limită
                 else {
                     String msg = "Milestone " + blockedM.getName()
                             + " is now unblocked as ticket " + closedTicket.getId()
@@ -274,11 +269,10 @@ public final class Database {
         if ((ticket.getStatus() == TicketStatus.IN_PROGRESS || ticket.getStatus() == TicketStatus.RESOLVED)
                 && !ticket.getAssignedTo().isEmpty()) {
             User user = findUserByUsername(ticket.getAssignedTo());
-            if (user instanceof Developer) {
+            if (user.getRole() == Role.DEVELOPER) {
                 Developer dev = (Developer) user;
                 List<Seniority> required = getRequiredSeniorities(ticket.getType(), calculated);
                 if (!required.contains(dev.getSeniority())) {
-                    // Unassign
                     ticket.setStatus(TicketStatus.OPEN);
                     String oldDev = ticket.getAssignedTo();
                     ticket.setAssignedTo("");

@@ -38,7 +38,6 @@ public final class ViewMilestonesCommand implements Command {
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
 
-        // Actualizăm data curentă pentru a fi siguri că starea e consistentă
         db.updateCurrentDate(timestamp);
 
         User user = db.findUserByUsername(username);
@@ -124,7 +123,6 @@ public final class ViewMilestonesCommand implements Command {
 
             ArrayNode repartition = mNode.putArray("repartition");
 
-            // FIX: Sortăm developerii înainte de afișare
             List<String> sortedDevs = new ArrayList<>(m.getAssignedDevs());
             sortedDevs.sort((d1, d2) -> {
                 long count1 = milestoneTickets.stream()
@@ -133,11 +131,11 @@ public final class ViewMilestonesCommand implements Command {
                 long count2 = milestoneTickets.stream()
                         .filter(t -> d2.equals(t.getAssignedTo()))
                         .count();
-                int comp = Long.compare(count1, count2); // Sortare crescătoare după număr tichete
+                int comp = Long.compare(count1, count2);
                 if (comp != 0) {
                     return comp;
                 }
-                return d1.compareTo(d2); // Sortare alfabetică la egalitate
+                return d1.compareTo(d2);
             });
 
             for (String dev : sortedDevs) {

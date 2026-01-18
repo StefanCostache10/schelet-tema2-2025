@@ -7,6 +7,7 @@ import model.Milestone;
 import model.ticket.Ticket;
 import model.enums.TicketStatus;
 import model.enums.Expertise;
+import model.enums.Role;
 import model.enums.Seniority;
 import model.enums.TicketPriority;
 import model.enums.TicketType;
@@ -49,7 +50,7 @@ public final class AssignTicketCommand implements Command {
 
         User user = db.findUserByUsername(username);
 
-        if (!(user instanceof Developer)) {
+        if (user.getRole() != Role.DEVELOPER) {
             return;
         }
         Developer dev = (Developer) user;
@@ -113,8 +114,6 @@ public final class AssignTicketCommand implements Command {
         statusAction.put("by", username);
         statusAction.put("timestamp", timestamp);
         ticket.addAction(statusAction);
-
-        //user.update("Ticket " + ticketId + " has been assigned to you.");
     }
 
     private List<Expertise> getRequiredSpecializations(final String areaStr) {

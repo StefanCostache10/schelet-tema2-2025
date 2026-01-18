@@ -77,7 +77,6 @@ public final class TicketRiskStrategy implements MetricStrategy {
             String type = t.getType().toString();
             byType.put(type, byType.getOrDefault(type, 0) + 1);
 
-            // Use calculated priority based on current date
             String currentDate = db.getCurrentSystemDate().toString();
             String prio = db.getCalculatedPriority(t, currentDate).toString();
             byPriority.put(prio, byPriority.getOrDefault(prio, 0) + 1);

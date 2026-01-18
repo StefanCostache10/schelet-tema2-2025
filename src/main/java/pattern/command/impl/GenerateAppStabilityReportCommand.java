@@ -33,7 +33,6 @@ public final class GenerateAppStabilityReportCommand implements Command {
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
 
-        // FIX: Ensure current date is updated
         db.updateCurrentDate(timestamp);
 
         User user = db.findUserByUsername(username);

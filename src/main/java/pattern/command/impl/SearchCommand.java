@@ -32,7 +32,6 @@ public final class SearchCommand implements Command {
         String timestamp = commandNode.get("timestamp").asText();
         String searchType = commandNode.get("filters").get("searchType").asText();
 
-        // AICI ESTE CHEIA: Trebuie să extragem sub-nodul "filters"
         JsonNode filters = commandNode.get("filters");
 
         SearchStrategy strategy;
@@ -42,7 +41,6 @@ public final class SearchCommand implements Command {
             strategy = new DeveloperSearchStrategy();
         }
 
-        // Trimitem sub-nodul 'filters', nu 'commandNode'
         List<ObjectNode> results = strategy.search(filters, username, mapper, db, timestamp);
 
         ObjectNode output = mapper.createObjectNode();

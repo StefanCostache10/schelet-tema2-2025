@@ -79,6 +79,13 @@ public final class App {
         }
     }
 
+    /**
+     * Loads users from the database file.
+     *
+     * @param mapper the object mapper
+     * @param db     the database instance
+     * @throws IOException if an I/O error occurs
+     */
     private static void loadUsers(final ObjectMapper mapper, final Database db)
             throws IOException {
         File usersFile = new File(INPUT_USERS_FIELD);
@@ -91,6 +98,15 @@ public final class App {
         }
     }
 
+    /**
+     * Processes the commands from the input file.
+     *
+     * @param mapper    the object mapper
+     * @param db        the database instance
+     * @param inputPath the path to the input file
+     * @param outputs   the list of output nodes
+     * @throws IOException if an I/O error occurs
+     */
     private static void processCommands(
             final ObjectMapper mapper,
             final Database db,
@@ -129,6 +145,16 @@ public final class App {
         }
     }
 
+    /**
+     * Builds a command object based on the command name.
+     *
+     * @param commandName the name of the command
+     * @param commandNode the JSON node containing command data
+     * @param outputs     the list of output nodes
+     * @param mapper      the object mapper
+     * @param db          the database instance
+     * @return the constructed Command object, or null if command is unknown
+     */
     private static Command buildCommand(
             final String commandName,
             final JsonNode commandNode,

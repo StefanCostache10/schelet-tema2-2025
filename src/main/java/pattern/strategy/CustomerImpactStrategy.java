@@ -48,7 +48,6 @@ public final class CustomerImpactStrategy implements MetricStrategy {
     public ObjectNode calculate(final ObjectMapper mapper, final Database db) {
         ObjectNode reportNode = mapper.createObjectNode();
 
-        // 1. Filtrare tichete: Doar OPEN și IN_PROGRESS
         List<Ticket> relevantTickets = db.getTickets().stream()
                 .filter(t -> t.getStatus() == TicketStatus.OPEN
                         || t.getStatus() == TicketStatus.IN_PROGRESS)
@@ -56,7 +55,6 @@ public final class CustomerImpactStrategy implements MetricStrategy {
 
         reportNode.put("totalTickets", relevantTickets.size());
 
-        // 2. Numărare pe Tipuri
         Map<String, Integer> byType = new HashMap<>();
         byType.put("BUG", 0);
         byType.put("FEATURE_REQUEST", 0);
@@ -70,7 +68,6 @@ public final class CustomerImpactStrategy implements MetricStrategy {
         ObjectNode typeNode = reportNode.putObject("ticketsByType");
         byType.forEach(typeNode::put);
 
-        // 3. Numărare pe Prioritate
         Map<String, Integer> byPriority = new HashMap<>();
         byPriority.put("LOW", 0);
         byPriority.put("MEDIUM", 0);
@@ -88,7 +85,6 @@ public final class CustomerImpactStrategy implements MetricStrategy {
         priorityNode.put("HIGH", byPriority.get("HIGH"));
         priorityNode.put("CRITICAL", byPriority.get("CRITICAL"));
 
-        // 4. Calculare Scoruri și Medii
         Map<String, Double> totalScore = new HashMap<>();
         totalScore.put("BUG", 0.0);
         totalScore.put("FEATURE_REQUEST", 0.0);

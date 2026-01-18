@@ -32,10 +32,9 @@ public final class TicketSearchStrategy implements SearchStrategy {
         User user = db.findUserByUsername(requesterUsername);
         List<Ticket> tickets = new ArrayList<>(db.getTickets());
 
-        // 1. Filtrare vizibilitate în funcție de rol
-        if (user instanceof Reporter) {
+        if (user.getRole() == Role.REPORTER) {
             tickets.removeIf(t -> !t.getReportedBy().equals(requesterUsername));
-        } else if (user instanceof Developer) {
+        } else if (user.getRole() == Role.DEVELOPER) {
             tickets.removeIf(t -> {
                 if (t.getStatus() != TicketStatus.OPEN) {
                     return true;
@@ -45,7 +44,6 @@ public final class TicketSearchStrategy implements SearchStrategy {
             });
         }
 
-        // 2. Aplicare filtre din cerere
         if (filters.has("type")) {
             String typeStr = filters.get("type").asText();
             tickets = tickets.stream()
@@ -74,7 +72,6 @@ public final class TicketSearchStrategy implements SearchStrategy {
                     .collect(Collectors.toList());
         }
 
-        // Procesare keywords
         List<String> keywords = new ArrayList<>();
         if (filters.has("keywords")) {
             for (JsonNode kw : filters.get("keywords")) {
@@ -94,7 +91,7 @@ public final class TicketSearchStrategy implements SearchStrategy {
 
         if (filters.has("availableForAssignment")
                 && filters.get("availableForAssignment").asBoolean()) {
-            if (user instanceof Developer) {
+            if (user.getRole() == Role.DEVELOPER) {
                 Developer dev = (Developer) user;
                 tickets = tickets.stream()
                         .filter(t -> isAvailableForAssignment(t, dev, db, timestamp))
@@ -102,11 +99,9 @@ public final class TicketSearchStrategy implements SearchStrategy {
             }
         }
 
-        // 3. Sortare (după timestamp, apoi ID)
         tickets.sort(Comparator.comparing(Ticket::getTimestamp)
                 .thenComparing(Ticket::getId));
 
-        // 4. Construire rezultate JSON
         List<ObjectNode> results = new ArrayList<>();
         for (Ticket t : tickets) {
             ObjectNode node = mapper.createObjectNode();

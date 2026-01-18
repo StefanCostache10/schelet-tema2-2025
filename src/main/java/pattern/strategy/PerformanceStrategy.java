@@ -63,7 +63,7 @@ public final class PerformanceStrategy implements MetricStrategy {
 
         List<Developer> developers = subordinates.stream()
                 .map(db::findUserByUsername)
-                .filter(u -> u instanceof Developer)
+                .filter(u -> u != null && u.getRole() == Role.DEVELOPER)
                 .map(u -> (Developer) u)
                 .sorted(Comparator.comparing(User::getUsername))
                 .collect(Collectors.toList());
@@ -171,7 +171,6 @@ public final class PerformanceStrategy implements MetricStrategy {
                                      final double avgResTime, final Database db) {
         long highPrio = tickets.stream()
                 .filter(t -> {
-                    // Utilizăm data închiderii tichetului pentru calculul priorității
                     TicketPriority p = db.getCalculatedPriority(t, t.getClosedAt());
                     return p == TicketPriority.HIGH || p == TicketPriority.CRITICAL;
                 })
@@ -187,7 +186,6 @@ public final class PerformanceStrategy implements MetricStrategy {
                                         final double avgResTime, final Database db) {
         long highPrio = tickets.stream()
                 .filter(t -> {
-                    // Utilizăm data închiderii tichetului pentru calculul priorității
                     TicketPriority p = db.getCalculatedPriority(t, t.getClosedAt());
                     return p == TicketPriority.HIGH || p == TicketPriority.CRITICAL;
                 })
