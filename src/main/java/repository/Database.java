@@ -73,7 +73,7 @@ public final class Database {
             }
         }
 
-        LocalDate created = LocalDate.parse(m.getCreatedAt());
+        LocalDate effectiveStart = getMilestoneUnblockedDate(m);
         LocalDate due = LocalDate.parse(m.getDueDate());
 
         TicketPriority p = ticket.getBusinessPriority();
@@ -81,7 +81,7 @@ public final class Database {
         if (now.isAfter(due.minusDays(2))) {
             p = TicketPriority.CRITICAL;
         } else {
-            long days = ChronoUnit.DAYS.between(created, now);
+            long days = ChronoUnit.DAYS.between(effectiveStart, now);
 
             if (days > 0) {
                 int steps = (int) (days / DAYS_FOR_PRIORITY_INCREASE);
@@ -95,6 +95,37 @@ public final class Database {
         checkPrioritySeniorityConflict(ticket, p, currentTimestamp);
 
         return p;
+    }
+
+    private LocalDate getMilestoneUnblockedDate(final Milestone m) {
+        LocalDate maxDate = LocalDate.parse(m.getCreatedAt());
+
+        for (Milestone other : milestones) {
+            if (other.getBlockingFor() != null && other.getBlockingFor().contains(m.getName())) {
+                LocalDate finishDate = getMilestoneFinishDate(other);
+                if (finishDate != null && finishDate.isAfter(maxDate)) {
+                    maxDate = finishDate;
+                }
+            }
+        }
+        return maxDate;
+    }
+
+    private LocalDate getMilestoneFinishDate(final Milestone m) {
+        if (!isMilestoneFinished(m)) {
+            return null;
+        }
+        LocalDate max = LocalDate.parse(m.getCreatedAt());
+        for (Integer tid : m.getTickets()) {
+            Ticket t = findTicketById(tid);
+            if (t != null && t.getClosedAt() != null && !t.getClosedAt().isEmpty()) {
+                LocalDate cDate = LocalDate.parse(t.getClosedAt());
+                if (cDate.isAfter(max)) {
+                    max = cDate;
+                }
+            }
+        }
+        return max;
     }
 
     /**

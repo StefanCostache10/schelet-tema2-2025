@@ -31,6 +31,8 @@ public final class GeneratePerformanceReportCommand implements Command {
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
 
+        db.updateCurrentDate(timestamp);
+
         User user = db.findUserByUsername(username);
         if (user == null || user.getRole() != Role.MANAGER) {
             ObjectNode error = mapper.createObjectNode();
