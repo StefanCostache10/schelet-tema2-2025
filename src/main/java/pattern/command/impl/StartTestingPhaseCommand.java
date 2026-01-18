@@ -43,7 +43,7 @@ public final class StartTestingPhaseCommand implements Command {
             error.put("username", username);
             error.put("timestamp", timestamp);
             error.put("error",
-                    "Cannot start a new testing phase while there are active milestones.");
+                    "Cannot start a new testing phase.");
             outputList.add(error);
             return;
         }

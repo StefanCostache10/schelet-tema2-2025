@@ -85,8 +85,10 @@ public final class PerformanceStrategy implements MetricStrategy {
             devNode.put("averageResolutionTime", round(avgResTime));
 
             double score = calculateScore(dev, devTickets, avgResTime, db);
+            dev.setPerformanceScore(score);
             devNode.put("performanceScore", round(score));
             devNode.put("seniority", dev.getSeniority().toString());
+
 
             devsArray.add(devNode);
         }

@@ -114,7 +114,7 @@ public final class AssignTicketCommand implements Command {
         statusAction.put("timestamp", timestamp);
         ticket.addAction(statusAction);
 
-        user.update("Ticket " + ticketId + " has been assigned to you.");
+        //user.update("Ticket " + ticketId + " has been assigned to you.");
     }
 
     private List<Expertise> getRequiredSpecializations(final String areaStr) {

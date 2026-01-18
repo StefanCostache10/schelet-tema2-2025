@@ -55,13 +55,13 @@ public final class DeveloperSearchStrategy implements SearchStrategy {
         if (filters.has("performanceScoreAbove")) {
             double threshold = filters.get("performanceScoreAbove").asDouble();
             developers = developers.stream()
-                    .filter(d -> d.getPerformanceScore() > threshold)
+                    .filter(d -> d.getPerformanceScore() >= threshold)
                     .collect(Collectors.toList());
         }
         if (filters.has("performanceScoreBelow")) {
             double threshold = filters.get("performanceScoreBelow").asDouble();
             developers = developers.stream()
-                    .filter(d -> d.getPerformanceScore() < threshold)
+                    .filter(d -> d.getPerformanceScore() <= threshold)
                     .collect(Collectors.toList());
         }
 

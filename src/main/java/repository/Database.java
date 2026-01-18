@@ -180,6 +180,7 @@ public final class Database {
             if (blockedM != null && !isMilestoneBlocked(blockedM)) {
                 LocalDate due = LocalDate.parse(blockedM.getDueDate());
 
+
                 if (currentSystemDate.isAfter(due)) {
                     String msg = "Milestone " + blockedM.getName()
                             + " was unblocked after due date. All active tickets are now CRITICAL.";

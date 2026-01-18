@@ -82,7 +82,7 @@ public final class AddCommentCommand implements Command {
         if (target != null && !target.isEmpty()) {
             var targetUser = db.findUserByUsername(target);
             if (targetUser != null) {
-                targetUser.update("New comment on ticket " + ticketId);
+                //targetUser.update("New comment on ticket " + ticketId);
             }
         }
     }
