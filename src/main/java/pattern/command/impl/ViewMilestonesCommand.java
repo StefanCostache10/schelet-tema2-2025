@@ -14,6 +14,7 @@ import repository.Database;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -36,6 +37,10 @@ public final class ViewMilestonesCommand implements Command {
     public void execute() {
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
+
+        // Actualizăm data curentă pentru a fi siguri că starea e consistentă
+        db.updateCurrentDate(timestamp);
+
         User user = db.findUserByUsername(username);
 
         if (user == null) {
@@ -118,7 +123,24 @@ public final class ViewMilestonesCommand implements Command {
             }
 
             ArrayNode repartition = mNode.putArray("repartition");
-            for (String dev : m.getAssignedDevs()) {
+
+            // FIX: Sortăm developerii înainte de afișare
+            List<String> sortedDevs = new ArrayList<>(m.getAssignedDevs());
+            sortedDevs.sort((d1, d2) -> {
+                long count1 = milestoneTickets.stream()
+                        .filter(t -> d1.equals(t.getAssignedTo()))
+                        .count();
+                long count2 = milestoneTickets.stream()
+                        .filter(t -> d2.equals(t.getAssignedTo()))
+                        .count();
+                int comp = Long.compare(count1, count2); // Sortare crescătoare după număr tichete
+                if (comp != 0) {
+                    return comp;
+                }
+                return d1.compareTo(d2); // Sortare alfabetică la egalitate
+            });
+
+            for (String dev : sortedDevs) {
                 ObjectNode devRep = repartition.addObject();
                 devRep.put("developer", dev);
                 List<Integer> devTickets = milestoneTickets.stream()

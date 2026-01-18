@@ -3,7 +3,6 @@ package repository;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import model.Milestone;
-import model.enums.Expertise;
 import model.enums.Seniority;
 import model.enums.TicketPriority;
 import model.enums.TicketStatus;
@@ -16,7 +15,6 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public final class Database {
@@ -66,6 +64,15 @@ public final class Database {
         }
 
         LocalDate now = LocalDate.parse(currentTimestamp);
+
+        // FIX: Dacă tichetul este CLOSED, oprim escaladarea la data închiderii.
+        if (ticket.getStatus() == TicketStatus.CLOSED && !ticket.getClosedAt().isEmpty()) {
+            LocalDate closedDate = LocalDate.parse(ticket.getClosedAt());
+            if (now.isAfter(closedDate)) {
+                now = closedDate;
+            }
+        }
+
         LocalDate created = LocalDate.parse(m.getCreatedAt());
         LocalDate due = LocalDate.parse(m.getDueDate());
 
@@ -75,10 +82,13 @@ public final class Database {
             p = TicketPriority.CRITICAL;
         } else {
             long days = ChronoUnit.DAYS.between(created, now);
-            int steps = (int) (days / DAYS_FOR_PRIORITY_INCREASE);
 
-            for (int i = 0; i < steps; i++) {
-                p = p.next();
+            if (days > 0) {
+                int steps = (int) (days / DAYS_FOR_PRIORITY_INCREASE);
+
+                for (int i = 0; i < steps; i++) {
+                    p = p.next();
+                }
             }
         }
 
@@ -112,6 +122,9 @@ public final class Database {
     private void checkTicketPriorities(final LocalDate date) {
         String dateStr = date.toString();
         for (Ticket t : tickets) {
+            // Calculăm prioritatea (și verificăm conflicte de senioritate),
+            // dar nu suprascriem câmpul businessPriority de pe tichet,
+            // pentru a nu afecta calculul incremental bazat pe valoarea inițială.
             getCalculatedPriority(t, dateStr);
         }
     }
