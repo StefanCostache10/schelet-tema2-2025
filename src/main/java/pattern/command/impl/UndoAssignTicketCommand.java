@@ -36,7 +36,7 @@ public final class UndoAssignTicketCommand implements Command {
 
         if (ticket.getStatus() != TicketStatus.IN_PROGRESS) {
             addError(username,
-                    "The ticket must be in IN_PROGRESS state to be de-assigned.",
+                    "Only IN_PROGRESS tickets can be unassigned.",
                     timestamp);
             return;
         }

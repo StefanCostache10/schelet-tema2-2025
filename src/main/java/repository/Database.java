@@ -98,12 +98,21 @@ public final class Database {
         if (currentSystemDate == null) {
             currentSystemDate = newDate;
             checkMilestoneDeadlines(currentSystemDate);
+            checkTicketPriorities(currentSystemDate);
             return;
         }
 
         while (currentSystemDate.isBefore(newDate)) {
             currentSystemDate = currentSystemDate.plusDays(1);
             checkMilestoneDeadlines(currentSystemDate);
+            checkTicketPriorities(currentSystemDate);
+        }
+    }
+
+    private void checkTicketPriorities(final LocalDate date) {
+        String dateStr = date.toString();
+        for (Ticket t : tickets) {
+            getCalculatedPriority(t, dateStr);
         }
     }
 
@@ -192,6 +201,11 @@ public final class Database {
                             + " is now unblocked as ticket " + closedTicket.getId()
                             + " has been CLOSED.";
                     notifyAssignedDevelopers(blockedM, msg);
+                    if (currentSystemDate.equals(due.minusDays(1))) {
+                        String dueMsg = "Milestone " + blockedM.getName()
+                                + " is due tomorrow. All unresolved tickets are now CRITICAL.";
+                        notifyAssignedDevelopers(blockedM, dueMsg);
+                    }
                 }
             }
         }
