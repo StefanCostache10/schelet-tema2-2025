@@ -180,12 +180,18 @@ public final class Database {
             if (blockedM != null && !isMilestoneBlocked(blockedM)) {
                 LocalDate due = LocalDate.parse(blockedM.getDueDate());
 
-
+                // Dacă deblocarea are loc DUPĂ termen
                 if (currentSystemDate.isAfter(due)) {
                     String msg = "Milestone " + blockedM.getName()
                             + " was unblocked after due date. All active tickets are now CRITICAL.";
                     notifyAssignedDevelopers(blockedM, msg);
-
+                }
+                // Dacă deblocarea are loc ÎNAINTE de termen sau chiar la data limită
+                else {
+                    String msg = "Milestone " + blockedM.getName()
+                            + " is now unblocked as ticket " + closedTicket.getId()
+                            + " has been CLOSED.";
+                    notifyAssignedDevelopers(blockedM, msg);
                 }
             }
         }
@@ -342,6 +348,15 @@ public final class Database {
     public Milestone findMilestoneForTicket(final int id) {
         return milestones.stream().filter(m -> m.getTickets().contains(id))
                 .findFirst().orElse(null);
+    }
+
+    /**
+     * Returns the current system date maintained by the database.
+     *
+     * @return the current system date
+     */
+    public LocalDate getCurrentSystemDate() {
+        return currentSystemDate;
     }
 
     public LocalDate getAppStartDate() {

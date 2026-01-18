@@ -30,6 +30,9 @@ public final class ViewTicketHistoryCommand implements Command {
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
 
+        // Corecție: Folosim findUserByUsername în loc de getUser
+        boolean isDeveloper = db.findUserByUsername(username).getRole().toString().equals("DEVELOPER");
+
         ObjectNode result = mapper.createObjectNode();
         result.put("command", "viewTicketHistory");
         result.put("username", username);
@@ -46,19 +49,38 @@ public final class ViewTicketHistoryCommand implements Command {
             tNode.put("title", ticket.getTitle());
             tNode.put("status", ticket.getStatus().toString());
 
+            String renounceTimestamp = null;
+            if (isDeveloper && ticket.getActions() != null) {
+                for (JsonNode action : ticket.getActions()) {
+                    if (action.get("action").asText().equals("DE-ASSIGNED")
+                            && action.get("by").asText().equals(username)) {
+                        renounceTimestamp = action.get("timestamp").asText();
+                        break;
+                    }
+                }
+            }
+
             ArrayNode actionsArray = tNode.putArray("actions");
             if (ticket.getActions() != null) {
-                ticket.getActions().forEach(actionsArray::add);
+                for (JsonNode action : ticket.getActions()) {
+                    if (renounceTimestamp == null
+                            || action.get("timestamp").asText().compareTo(renounceTimestamp) <= 0) {
+                        actionsArray.add(action);
+                    }
+                }
             }
 
             ArrayNode commentsArray = tNode.putArray("comments");
             if (ticket.getComments() != null) {
                 for (Comment c : ticket.getComments()) {
-                    ObjectNode cNode = mapper.createObjectNode();
-                    cNode.put("author", c.getAuthor());
-                    cNode.put("content", c.getContent());
-                    cNode.put("createdAt", c.getCreatedAt());
-                    commentsArray.add(cNode);
+                    if (renounceTimestamp == null
+                            || c.getCreatedAt().compareTo(renounceTimestamp) <= 0) {
+                        ObjectNode cNode = mapper.createObjectNode();
+                        cNode.put("author", c.getAuthor());
+                        cNode.put("content", c.getContent());
+                        cNode.put("createdAt", c.getCreatedAt());
+                        commentsArray.add(cNode);
+                    }
                 }
             }
 

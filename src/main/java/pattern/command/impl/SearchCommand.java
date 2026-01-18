@@ -30,20 +30,19 @@ public final class SearchCommand implements Command {
     public void execute() {
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
+        String searchType = commandNode.get("filters").get("searchType").asText();
+
+        // AICI ESTE CHEIA: Trebuie să extragem sub-nodul "filters"
         JsonNode filters = commandNode.get("filters");
 
-        String searchType = "TICKET";
-        if (filters.has("searchType")) {
-            searchType = filters.get("searchType").asText();
-        }
-
         SearchStrategy strategy;
-        if ("DEVELOPER".equals(searchType)) {
-            strategy = new DeveloperSearchStrategy();
-        } else {
+        if (searchType.equals("TICKET")) {
             strategy = new TicketSearchStrategy();
+        } else {
+            strategy = new DeveloperSearchStrategy();
         }
 
+        // Trimitem sub-nodul 'filters', nu 'commandNode'
         List<ObjectNode> results = strategy.search(filters, username, mapper, db, timestamp);
 
         ObjectNode output = mapper.createObjectNode();

@@ -171,7 +171,8 @@ public final class PerformanceStrategy implements MetricStrategy {
                                      final double avgResTime, final Database db) {
         long highPrio = tickets.stream()
                 .filter(t -> {
-                    TicketPriority p = db.getCalculatedPriority(t, t.getSolvedAt());
+                    // Utilizăm data închiderii tichetului pentru calculul priorității
+                    TicketPriority p = db.getCalculatedPriority(t, t.getClosedAt());
                     return p == TicketPriority.HIGH || p == TicketPriority.CRITICAL;
                 })
                 .count();
@@ -186,7 +187,8 @@ public final class PerformanceStrategy implements MetricStrategy {
                                         final double avgResTime, final Database db) {
         long highPrio = tickets.stream()
                 .filter(t -> {
-                    TicketPriority p = db.getCalculatedPriority(t, t.getSolvedAt());
+                    // Utilizăm data închiderii tichetului pentru calculul priorității
+                    TicketPriority p = db.getCalculatedPriority(t, t.getClosedAt());
                     return p == TicketPriority.HIGH || p == TicketPriority.CRITICAL;
                 })
                 .count();

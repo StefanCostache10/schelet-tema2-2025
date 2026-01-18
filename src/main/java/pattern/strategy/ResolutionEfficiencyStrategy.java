@@ -48,6 +48,7 @@ public final class ResolutionEfficiencyStrategy implements MetricStrategy {
     public ObjectNode calculate(final ObjectMapper mapper, final Database db) {
         ObjectNode reportNode = mapper.createObjectNode();
 
+        // 1. Filtrare tichete: Doar cele finalizate (RESOLVED sau CLOSED)
         List<Ticket> closedTickets = db.getTickets().stream()
                 .filter(t -> t.getStatus() == TicketStatus.RESOLVED
                         || t.getStatus() == TicketStatus.CLOSED)
@@ -71,11 +72,16 @@ public final class ResolutionEfficiencyStrategy implements MetricStrategy {
         efficiencyScores.put("FEATURE_REQUEST", new ArrayList<>());
         efficiencyScores.put("UI_FEEDBACK", new ArrayList<>());
 
+        // 2. Procesare tichete și calcul scoruri
         for (Ticket t : closedTickets) {
             String type = t.getType().toString();
             byType.put(type, byType.getOrDefault(type, 0) + 1);
 
-            String prio = t.getBusinessPriority().toString();
+            // --- ACTUALIZARE CRITICĂ: Prioritate dinamică la data raportului ---
+            // Se folosește data curentă a sistemului din Database pentru a vedea
+            // dacă un tichet a devenit HIGH/CRITICAL din cauza trecerii timpului.
+            String currentDate = db.getCurrentSystemDate().toString();
+            String prio = db.getCalculatedPriority(t, currentDate).toString();
             byPriority.put(prio, byPriority.getOrDefault(prio, 0) + 1);
 
             double days = calculateDays(t.getAssignedAt(), t.getSolvedAt());
@@ -103,6 +109,7 @@ public final class ResolutionEfficiencyStrategy implements MetricStrategy {
             efficiencyScores.get(type).add(finalEfficiency);
         }
 
+        // 3. Construire noduri JSON pentru output
         ObjectNode ticketsByTypeNode = reportNode.putObject("ticketsByType");
         byType.forEach(ticketsByTypeNode::put);
 
@@ -176,6 +183,8 @@ public final class ResolutionEfficiencyStrategy implements MetricStrategy {
             default: return 0;
         }
     }
+
+
 
     private int getFrequencyValue(final String f) {
         if (f == null) {
