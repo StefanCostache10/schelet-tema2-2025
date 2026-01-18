@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import model.ticket.Ticket;
 import model.ticket.Comment;
+import model.enums.Role;
 import pattern.command.Command;
 import repository.Database;
 import java.util.List;
@@ -30,8 +31,23 @@ public final class ViewTicketHistoryCommand implements Command {
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
 
-        // Corecție: Folosim findUserByUsername în loc de getUser
-        boolean isDeveloper = db.findUserByUsername(username).getRole().toString().equals("DEVELOPER");
+        var user = db.findUserByUsername(username);
+        if (user == null) {
+            return;
+        }
+
+        if (user.getRole() == Role.REPORTER) {
+            ObjectNode err = mapper.createObjectNode();
+            err.put("command", "viewTicketHistory");
+            err.put("username", username);
+            err.put("timestamp", timestamp);
+            err.put("error", "The user does not have permission to execute this command: "
+                    + "required role DEVELOPER, MANAGER; user role REPORTER.");
+            outputList.add(err);
+            return;
+        }
+
+        boolean isDeveloper = user.getRole() == Role.DEVELOPER;
 
         ObjectNode result = mapper.createObjectNode();
         result.put("command", "viewTicketHistory");

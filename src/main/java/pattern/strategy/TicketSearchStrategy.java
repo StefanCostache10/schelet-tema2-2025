@@ -119,7 +119,6 @@ public final class TicketSearchStrategy implements SearchStrategy {
             node.put("solvedAt", t.getSolvedAt());
             node.put("reportedBy", t.getReportedBy());
 
-            // FIX: Adăugăm matchingWords dacă avem keywords SAU dacă userul este MANAGER.
             boolean hasKeywords = filters.has("keywords");
 
             if (hasKeywords || user.getRole() == Role.MANAGER) {
@@ -128,8 +127,10 @@ public final class TicketSearchStrategy implements SearchStrategy {
                     String desc = t.getDescription() != null ? t.getDescription() : "";
                     String content = (t.getTitle() + " " + desc).toLowerCase();
 
-                    keywords.stream()
-                            .filter(content::contains)
+                    String[] words = content.split("[^a-zA-Z0-9]+");
+                    Arrays.stream(words)
+                            .filter(w -> !w.isEmpty())
+                            .filter(w -> keywords.stream().anyMatch(w::contains))
                             .distinct()
                             .sorted()
                             .forEach(mwNode::add);

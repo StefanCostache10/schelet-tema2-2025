@@ -227,7 +227,8 @@ public final class Database {
     private void checkPrioritySeniorityConflict(final Ticket ticket,
                                                 final TicketPriority calculated,
                                                 final String timestamp) {
-        if (ticket.getStatus() == TicketStatus.IN_PROGRESS && !ticket.getAssignedTo().isEmpty()) {
+        if ((ticket.getStatus() == TicketStatus.IN_PROGRESS || ticket.getStatus() == TicketStatus.RESOLVED)
+                && !ticket.getAssignedTo().isEmpty()) {
             User user = findUserByUsername(ticket.getAssignedTo());
             if (user instanceof Developer) {
                 Developer dev = (Developer) user;
@@ -238,6 +239,9 @@ public final class Database {
                     String oldDev = ticket.getAssignedTo();
                     ticket.setAssignedTo("");
                     ticket.setAssignedAt("");
+                    if (ticket.getSolvedAt() != null) {
+                        ticket.setSolvedAt("");
+                    }
 
                     ObjectNode action = JsonNodeFactory.instance.objectNode();
                     action.put("from", oldDev);

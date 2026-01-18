@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import model.ticket.Ticket;
+import model.enums.Role;
+import model.user.User;
 import pattern.command.Command;
 import repository.Database;
 import java.util.List;
@@ -27,6 +29,21 @@ public final class ViewAssignedTicketsCommand implements Command {
     public void execute() {
         String username = commandNode.get("username").asText();
         String timestamp = commandNode.get("timestamp").asText();
+
+        User user = db.findUserByUsername(username);
+        if (user == null) {
+            return;
+        }
+
+        if (user.getRole() != Role.DEVELOPER) {
+            ObjectNode err = mapper.createObjectNode();
+            err.put("command", "viewAssignedTickets");
+            err.put("username", username);
+            err.put("timestamp", timestamp);
+            err.put("error", "The user does not have permission to execute this command: required role DEVELOPER; user role " + user.getRole() + ".");
+            outputList.add(err);
+            return;
+        }
 
         List<Ticket> assigned = db.getTickets().stream()
                 .filter(t -> t.getAssignedTo().equals(username))
